@@ -20,6 +20,8 @@ note that "+" means we removed two <0.1s wav files in test1 before decoding.
 
 ## Conformer Result
 
+
+* 50 epochs
 * Feature info: using fbank feature, cmvn, dither, online speed perturb
 * Pipeline info: run.sh, include data preprocessing, training and testing
 * Training info: train_conformer.yaml, kernel size 15, lr 0.004, batch size 12, 8 gpu, acc_grad 1, 50 epochs, dither 0.0
@@ -32,6 +34,23 @@ note that "+" means we removed two <0.1s wav files in test1 before decoding.
 | ctc prefix beam search           | 7.83+      | 5.28       | 6.08       |
 | attention decoder                | 7.83       | 5.63       | 6.37       |
 | attention rescoring              | 7.28+      | 4.81       | 5.44       |
+
+note that "+" means we removed two <0.1s wav files in test1 before decoding.
+
+
+* 120 epochs
+* Feature info: using fbank feature, cmvn, dither, online speed perturb
+* Pipeline info: run.sh, include data preprocessing, training and testing
+* Training info: train_conformer.yaml, kernel size 15, lr 0.004, batch size 12, 8 gpu, acc_grad 1, 120 epochs, dither 0.0
+* Decoding info: ctc_weight 0.5, average_num 10
+
+
+| decoding mode                    | test1      | test2      | test3      |
+|----------------------------------|------------|------------|------------|
+| ctc greedy search                | 7.66       | 5.15       | 5.83       |
+| ctc prefix beam search           | 7.56+      | 5.06       | 5.84       |
+| attention decoder                | 7.49       | 5.30       | 6.02       |
+| attention rescoring              | 6.97+      | 4.65       | 5.29       |
 
 note that "+" means we removed two <0.1s wav files in test1 before decoding.
 
