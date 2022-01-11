@@ -40,6 +40,7 @@ recipe: https://github.com/wenet-e2e/wenet/tree/main/examples/csj/s0
 ## Conformer Result
 
 * 50 epochs
+
 | decoding mode                    | test1      | test2      | test3      |
 |----------------------------------|------------|------------|------------|
 | ctc greedy search                | 7.94       | 5.29       | 6.10       |
@@ -49,6 +50,7 @@ recipe: https://github.com/wenet-e2e/wenet/tree/main/examples/csj/s0
 
 
 * 100 epochs
+
 | decoding mode                    | test1      | test2      | test3      |
 |----------------------------------|------------|------------|------------|
 | ctc greedy search                | 7.66       | 5.15       | 5.83       |
