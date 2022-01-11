@@ -21,23 +21,22 @@ recipe: https://github.com/wenet-e2e/wenet/tree/main/examples/csj/s0
 * 然后是data.list，这个是WeNet所需要的规范化输入。鉴于CSJ中有几个ID的text和wav不是1：1对齐的，这里简单修改了一下WeNet中的make_raw_list.py，去除了1：1限制，更新后的脚本是csj_tools/wn.4.make_raw_list.py
 * 模型的训练，测试，都是沿用了WeNet的标配。
 
-## 结果如下面四个表所示：
+## 结果如下面几个表所示：
 
 ## Conformer Result Bidecoder (large)
 
 
 | decoding mode                    | test1      | test2      | test3      |
 |----------------------------------|------------|------------|------------|
-| ctc greedy search                | 5.85       | 4.08       | 4.55       |
+| ctc greedy search                | 5.85       | 4.08       | **4.55**   |
 | ctc prefix beam search           | 5.77+      | 3.90       | 4.68       |
 | attention decoder                | 5.96       | 4.09       | 4.96       |
-| attention rescoring              | 5.61+      | 3.78       | 4.65       |
+| attention rescoring              | **5.61**+  | **3.78**   | 4.65       |
 
 +号表示在测试的时候，删除了两个长度<0.1s的语音文件。
 
 
-
-## Conformer Result
+## Conformer
 
 * 50 epochs
 
@@ -46,21 +45,23 @@ recipe: https://github.com/wenet-e2e/wenet/tree/main/examples/csj/s0
 | ctc greedy search                | 7.94       | 5.29       | 6.10       |
 | ctc prefix beam search           | 7.83+      | 5.28       | 6.08       |
 | attention decoder                | 7.83       | 5.63       | 6.37       |
-| attention rescoring              | 7.28+      | 4.81       | 5.44       |
+| attention rescoring              | **7.28**+  | **4.81**   | **5.44**   |
+
++号表示在测试的时候，删除了两个长度<0.1s的语音文件。
 
 
-* 100 epochs
+* 120 epochs
+
 
 | decoding mode                    | test1      | test2      | test3      |
 |----------------------------------|------------|------------|------------|
 | ctc greedy search                | 7.66       | 5.15       | 5.83       |
 | ctc prefix beam search           | 7.56+      | 5.06       | 5.84       |
 | attention decoder                | 7.49       | 5.30       | 6.02       |
-| attention rescoring              | 6.97+      | 4.65       | 5.29       |
+| attention rescoring              | **6.97**+  | **4.65**   | **5.29**   |
 
 
 +号表示在测试的时候，删除了两个长度<0.1s的语音文件。
-
 
 ## Conformer U2++ Result
 
@@ -70,13 +71,12 @@ recipe: https://github.com/wenet-e2e/wenet/tree/main/examples/csj/s0
 | ctc greedy search                | 6.63       | 4.93       | 5.04       |
 | ctc prefix beam search           | 6.59+      | 4.87       | 5.01       |
 | attention decoder                | 6.41       | 4.48       | 4.93       |
-| attention rescoring              | 6.20+      | 4.39       | 4.56       |
+| attention rescoring              | **6.20**+  | **4.39**   | **4.56**   |
 
 +号表示在测试的时候，删除了两个长度<0.1s的语音文件。
 
 
-
-## Conformer U2 (unified conformer) Result
+## Conformer U2 Result
 
 
 
@@ -85,7 +85,6 @@ recipe: https://github.com/wenet-e2e/wenet/tree/main/examples/csj/s0
 | ctc greedy search                | 6.80       | 5.11       | 5.12       |
 | ctc prefix beam search           | 6.76+      | 5.03       | 5.11       |
 | attention decoder                | 6.39       | 4.61       | 5.25       |
-| attention rescoring              | 6.28+      | 4.43       | 4.70       |
+| attention rescoring              | **6.28**+  | **4.43**   | **4.70**   |
 
 +号表示在测试的时候，删除了两个长度<0.1s的语音文件。
-
