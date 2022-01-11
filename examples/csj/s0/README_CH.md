@@ -39,13 +39,23 @@ recipe: https://github.com/wenet-e2e/wenet/tree/main/examples/csj/s0
 
 ## Conformer Result
 
-
+* 50 epochs
 | decoding mode                    | test1      | test2      | test3      |
 |----------------------------------|------------|------------|------------|
 | ctc greedy search                | 7.94       | 5.29       | 6.10       |
 | ctc prefix beam search           | 7.83+      | 5.28       | 6.08       |
 | attention decoder                | 7.83       | 5.63       | 6.37       |
 | attention rescoring              | 7.28+      | 4.81       | 5.44       |
+
+
+* 100 epochs
+| decoding mode                    | test1      | test2      | test3      |
+|----------------------------------|------------|------------|------------|
+| ctc greedy search                | 7.66       | 5.15       | 5.83       |
+| ctc prefix beam search           | 7.56+      | 5.06       | 5.84       |
+| attention decoder                | 7.49       | 5.30       | 6.02       |
+| attention rescoring              | 6.97+      | 4.65       | 5.29       |
+
 
 +号表示在测试的时候，删除了两个长度<0.1s的语音文件。
 
