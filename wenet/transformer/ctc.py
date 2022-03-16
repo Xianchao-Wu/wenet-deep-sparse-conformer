@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from typeguard import check_argument_types
+import ipdb
 
 
 class CTC(torch.nn.Module):
@@ -38,6 +39,7 @@ class CTC(torch.nn.Module):
             ys_pad: batch of padded character id sequence tensor (B, Lmax)
             ys_lens: batch of lengths of character sequence (B)
         """
+        #ipdb.set_trace()
         # hs_pad: (B, L, NProj) -> ys_hat: (B, L, Nvocab)
         ys_hat = self.ctc_lo(F.dropout(hs_pad, p=self.dropout_rate))
         # ys_hat: (B, L, D) -> (L, B, D)

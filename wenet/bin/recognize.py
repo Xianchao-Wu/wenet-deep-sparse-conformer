@@ -104,6 +104,7 @@ def get_args():
 
 
 def main():
+    #import ipdb; ipdb.set_trace()
     args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')

@@ -9,6 +9,7 @@ import math
 from typing import Tuple
 
 import torch
+import ipdb
 
 
 class PositionalEncoding(torch.nn.Module):
@@ -56,6 +57,7 @@ class PositionalEncoding(torch.nn.Module):
             torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
             torch.Tensor: for compatibility to RelPositionalEncoding
         """
+        #ipdb.set_trace()
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
         pos_emb = self.pe[:, offset:offset + x.size(1)]
@@ -104,6 +106,7 @@ class RelPositionalEncoding(PositionalEncoding):
             torch.Tensor: Encoded tensor (batch, time, `*`).
             torch.Tensor: Positional embedding tensor (1, time, `*`).
         """
+        #ipdb.set_trace()
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
         x = x * self.xscale
@@ -124,6 +127,7 @@ class NoPositionalEncoding(torch.nn.Module):
                 offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
         """ Just return zero vector for interface compatibility
         """
+        #ipdb.set_trace()
         pos_emb = torch.zeros(1, x.size(1), self.d_model).to(x.device)
         return self.dropout(x), pos_emb
 

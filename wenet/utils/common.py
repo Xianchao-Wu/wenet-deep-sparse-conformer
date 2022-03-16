@@ -184,3 +184,33 @@ def log_add(args: List[int]) -> float:
     a_max = max(args)
     lsp = math.log(sum(math.exp(a - a_max) for a in args))
     return a_max + lsp
+
+def deepnorm_init_(wname, w, beta=1.0):
+    #if w is ['ffn', 'v_proj', 'out_proj']:
+    #    torch.nn.init.xavier_normal_(w, gain=beta)
+    #elif w is ['q_proj', 'k_proj']:
+    #    torch.nn.init.xavier_normal_(w, gain=1)
+
+    # ffn -> feed_forward
+    # v_proj -> linear_v
+    # out_proj -> linear_out
+    # q_proj -> linear_q
+    # k_proj -> linear_k
+    if len(w.shape) < 2:
+        return
+
+    key1list = ['feed_forward', 'linear_v', 'linear_out']
+    key2list = ['linear_q', 'linear_k']
+   
+    find=False
+    for key1 in key1list:
+        if key1 in wname:
+            torch.nn.init.xavier_normal_(w, gain=beta)
+            find=True
+            break
+    if not find:
+        for key2 in key2list:
+            if key2 in wname:
+                torch.nn.init.xavier_normal_(w, gain=1.0)
+                break
+

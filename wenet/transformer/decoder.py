@@ -12,6 +12,7 @@ from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
+import ipdb
 
 
 class TransformerDecoder(torch.nn.Module):
@@ -49,6 +50,7 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         concat_after: bool = False,
+        deepnorm_alpha: float = 1.0,
     ):
         assert check_argument_types()
         super().__init__()
@@ -67,6 +69,7 @@ class TransformerDecoder(torch.nn.Module):
         self.use_output_layer = use_output_layer
         self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
         self.num_blocks = num_blocks
+
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
@@ -79,6 +82,7 @@ class TransformerDecoder(torch.nn.Module):
                 dropout_rate,
                 normalize_before,
                 concat_after,
+                deepnorm_alpha,
             ) for _ in range(self.num_blocks)
         ])
 
@@ -108,6 +112,7 @@ class TransformerDecoder(torch.nn.Module):
                 torch.tensor(0.0), in order to unify api with bidirectional decoder
                 olens: (batch, )
         """
+        #ipdb.set_trace()
         tgt = ys_in_pad
         maxlen = tgt.size(1)
         # tgt_mask: (B, 1, L)
@@ -151,6 +156,7 @@ class TransformerDecoder(torch.nn.Module):
             y, cache: NN output value and cache per `self.decoders`.
             y.shape` is (batch, maxlen_out, token)
         """
+        #ipdb.set_trace()
         x, _ = self.embed(tgt)
         new_cache = []
         for i, decoder in enumerate(self.decoders):
@@ -210,6 +216,7 @@ class BiTransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         concat_after: bool = False,
+        deepnorm_alpha: float = 1.0,
     ):
 
         assert check_argument_types()
@@ -218,13 +225,15 @@ class BiTransformerDecoder(torch.nn.Module):
             vocab_size, encoder_output_size, attention_heads, linear_units,
             num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before, concat_after)
+            input_layer, use_output_layer, normalize_before, concat_after,
+            deepnorm_alpha)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
             r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before, concat_after)
+            input_layer, use_output_layer, normalize_before, concat_after,
+            deepnorm_alpha)
 
     def forward(
         self,
@@ -253,6 +262,7 @@ class BiTransformerDecoder(torch.nn.Module):
                     if use_output_layer is True,
                 olens: (batch, )
         """
+        #ipdb.set_trace()
         l_x, _, olens = self.left_decoder(memory, memory_mask, ys_in_pad,
                                           ys_in_lens)
         r_x = torch.tensor(0.0)
@@ -283,5 +293,6 @@ class BiTransformerDecoder(torch.nn.Module):
             y, cache: NN output value and cache per `self.decoders`.
             y.shape` is (batch, maxlen_out, token)
         """
+        #ipdb.set_trace()
         return self.left_decoder.forward_one_step(memory, memory_mask, tgt,
                                                   tgt_mask, cache)

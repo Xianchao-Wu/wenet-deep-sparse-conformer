@@ -9,6 +9,7 @@ from typing import Optional, Tuple
 
 import torch
 from torch import nn
+import ipdb
 
 
 class TransformerEncoderLayer(nn.Module):
@@ -39,6 +40,7 @@ class TransformerEncoderLayer(nn.Module):
         dropout_rate: float,
         normalize_before: bool = True,
         concat_after: bool = False,
+        deepnorm_alpha: float = 1.0,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -53,6 +55,7 @@ class TransformerEncoderLayer(nn.Module):
         # concat_linear may be not used in forward fuction,
         # but will be saved in the *.pt
         self.concat_linear = nn.Linear(size + size, size)
+        self.deepnorm_alpha = deepnorm_alpha
 
     def forward(
         self,
@@ -81,6 +84,7 @@ class TransformerEncoderLayer(nn.Module):
             torch.Tensor: Mask tensor (#batch, time).
 
         """
+        #ipdb.set_trace()
         residual = x
         if self.normalize_before:
             x = self.norm1(x)
@@ -98,16 +102,16 @@ class TransformerEncoderLayer(nn.Module):
 
         if self.concat_after:
             x_concat = torch.cat((x, self.self_attn(x_q, x, x, mask)), dim=-1)
-            x = residual + self.concat_linear(x_concat)
+            x = residual * self.deepnorm_alpha + self.concat_linear(x_concat)
         else:
-            x = residual + self.dropout(self.self_attn(x_q, x, x, mask))
+            x = residual * self.deepnorm_alpha + self.dropout(self.self_attn(x_q, x, x, mask))
         if not self.normalize_before:
             x = self.norm1(x)
 
         residual = x
         if self.normalize_before:
             x = self.norm2(x)
-        x = residual + self.dropout(self.feed_forward(x))
+        x = residual * self.deepnorm_alpha + self.dropout(self.feed_forward(x))
         if not self.normalize_before:
             x = self.norm2(x)
 
@@ -151,6 +155,7 @@ class ConformerEncoderLayer(nn.Module):
         dropout_rate: float = 0.1,
         normalize_before: bool = True,
         concat_after: bool = False,
+        deepnorm_alpha: float = 1.0,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -175,6 +180,7 @@ class ConformerEncoderLayer(nn.Module):
         self.normalize_before = normalize_before
         self.concat_after = concat_after
         self.concat_linear = nn.Linear(size + size, size)
+        self.deepnorm_alpha = deepnorm_alpha
 
     def forward(
         self,
@@ -201,13 +207,13 @@ class ConformerEncoderLayer(nn.Module):
             torch.Tensor: Output tensor (#batch, time, size).
             torch.Tensor: Mask tensor (#batch, time).
         """
-
+        #ipdb.set_trace()
         # whether to use macaron style
         if self.feed_forward_macaron is not None:
             residual = x
             if self.normalize_before:
                 x = self.norm_ff_macaron(x)
-            x = residual + self.ff_scale * self.dropout(
+            x = residual * self.deepnorm_alpha + self.ff_scale * self.dropout(
                 self.feed_forward_macaron(x))
             if not self.normalize_before:
                 x = self.norm_ff_macaron(x)
@@ -231,9 +237,9 @@ class ConformerEncoderLayer(nn.Module):
         x_att = self.self_attn(x_q, x, x, mask, pos_emb)
         if self.concat_after:
             x_concat = torch.cat((x, x_att), dim=-1)
-            x = residual + self.concat_linear(x_concat)
+            x = residual * self.deepnorm_alpha + self.concat_linear(x_concat)
         else:
-            x = residual + self.dropout(x_att)
+            x = residual * self.deepnorm_alpha + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm_mha(x)
 
@@ -245,7 +251,7 @@ class ConformerEncoderLayer(nn.Module):
             if self.normalize_before:
                 x = self.norm_conv(x)
             x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache)
-            x = residual + self.dropout(x)
+            x = residual * self.deepnorm_alpha + self.dropout(x)
 
             if not self.normalize_before:
                 x = self.norm_conv(x)
@@ -255,7 +261,7 @@ class ConformerEncoderLayer(nn.Module):
         if self.normalize_before:
             x = self.norm_ff(x)
 
-        x = residual + self.ff_scale * self.dropout(self.feed_forward(x))
+        x = residual * self.deepnorm_alpha + self.ff_scale * self.dropout(self.feed_forward(x))
         if not self.normalize_before:
             x = self.norm_ff(x)
 

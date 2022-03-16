@@ -35,7 +35,7 @@ model_conf:
     ctc_weight: 0.3
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
-    reverse_weight: 0.3
+    reverse_weight: 0.5
 
 # dataset related
 dataset_conf:
@@ -68,11 +68,11 @@ dataset_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 12
+        batch_size: 8
 
 grad_clip: 5
 accum_grad: 4
-max_epoch: 120
+max_epoch: 200
 log_interval: 100
 
 optim: adam

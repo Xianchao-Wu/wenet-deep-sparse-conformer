@@ -33,6 +33,7 @@ from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.scheduler import WarmupLR
 from wenet.utils.config import override_config
+from wenet.utils.common import deepnorm_init_
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
@@ -112,6 +113,12 @@ def get_args():
 
 
 def main():
+    logging.getLogger('parso.cache').disabled=True
+    logging.getLogger('parso.cache.pickle').disabled=True
+
+    logging.getLogger().setLevel(logging.WARNING);
+
+
     args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
@@ -135,13 +142,16 @@ def main():
     symbol_table = read_symbol_table(args.symbol_table)
 
     train_conf = configs['dataset_conf']
-    cv_conf = copy.deepcopy(train_conf)
+    cv_conf = copy.deepcopy(train_conf) # cv for cross-validation
     cv_conf['speed_perturb'] = False
     cv_conf['spec_aug'] = False
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    #import ipdb; ipdb.set_trace()
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
                             train_conf, args.bpe_model, non_lang_syms, True)
+    #import ipdb; ipdb.set_trace()
+    #train_dataset[0]
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          symbol_table,
@@ -149,6 +159,8 @@ def main():
                          args.bpe_model,
                          non_lang_syms,
                          partition=False)
+    #import ipdb; ipdb.set_trace()
+    #cv_dataset[0]
 
     train_data_loader = DataLoader(train_dataset,
                                    batch_size=None,
@@ -169,6 +181,20 @@ def main():
     configs['output_dim'] = vocab_size
     configs['cmvn_file'] = args.cmvn
     configs['is_json_cmvn'] = True
+
+    # deepnorm init param
+    #import ipdb; ipdb.set_trace()
+    N = configs['encoder_conf']['num_blocks'] 
+    M = configs['decoder_conf']['num_blocks']
+
+    beta_enc = 0.87 * pow(pow(2.0*N, 4.0)*M, -1.0/16.0)
+    beta_dec = pow(12.0*M, -1.0/4.0)
+    alpha_enc = 0.81 * pow(pow(2.0*N, 4.0)*M, 1.0/16.0)
+    alpha_dec = pow(3.0*M, 1.0/4.0)
+
+    configs['encoder_conf']['deepnorm_alpha'] = alpha_enc
+    configs['decoder_conf']['deepnorm_alpha'] = alpha_dec
+
     if args.rank == 0:
         saved_config_path = os.path.join(args.model_dir, 'train.yaml')
         with open(saved_config_path, 'w') as fout:
@@ -179,6 +205,23 @@ def main():
     model = init_asr_model(configs)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
+
+    # deepnorm init
+    #import ipdb; ipdb.set_trace()
+    for pname, p in model.named_parameters():
+        if p.requires_grad:
+            print(p.numel(), pname)
+            if pname.startswith('encoder'):
+                #import ipdb; ipdb.set_trace()
+                deepnorm_init_(pname, p, beta=beta_enc)
+                #import ipdb; ipdb.set_trace()
+            elif pname.startswith('decoder'):
+                #import ipdb; ipdb.set_trace()
+                deepnorm_init_(pname, p, beta=beta_dec)
+                #import ipdb; ipdb.set_trace()
+
+
+    #import ipdb; ipdb.set_trace()
     print('the number of model params: {}'.format(num_params))
 
     # !!!IMPORTANT!!!
@@ -249,6 +292,7 @@ def main():
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler)
+        #import ipdb; ipdb.set_trace()
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
                                                 configs)
         cv_loss = total_loss / num_seen_utts

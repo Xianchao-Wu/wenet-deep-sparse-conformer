@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 
 import torch
 from torch import nn
+import ipdb
 
 
 class MultiHeadedAttention(nn.Module):
@@ -53,6 +54,7 @@ class MultiHeadedAttention(nn.Module):
                 (#batch, n_head, time2, d_k).
 
         """
+        #ipdb.set_trace()
         n_batch = query.size(0)
         q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
         k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
@@ -80,6 +82,7 @@ class MultiHeadedAttention(nn.Module):
                 weighted by the attention score (#batch, time1, time2).
 
         """
+        #ipdb.set_trace()
         n_batch = value.size(0)
         if mask is not None:
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
@@ -125,6 +128,7 @@ class MultiHeadedAttention(nn.Module):
             torch.Tensor: Output tensor (#batch, time1, d_model).
 
         """
+        #ipdb.set_trace()
         q, k, v = self.forward_qkv(query, key, value)
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
         return self.forward_attention(v, scores, mask)
@@ -191,6 +195,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
         """
+        #ipdb.set_trace()
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
 

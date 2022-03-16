@@ -118,6 +118,7 @@ def parse_raw(data):
         Returns:
             Iterable[{key, wav, txt, sample_rate}]
     """
+    #import ipdb; ipdb.set_trace()
     for sample in data:
         assert 'src' in sample
         json_line = sample['src']
@@ -177,6 +178,7 @@ def filter(data,
         Returns:
             Iterable[{key, wav, label, sample_rate}]
     """
+    #import ipdb; ipdb.set_trace()
     for sample in data:
         assert 'sample_rate' in sample
         assert 'wav' in sample
@@ -210,6 +212,7 @@ def resample(data, resample_rate=16000):
         Returns:
             Iterable[{key, wav, label, sample_rate}]
     """
+    #import ipdb; ipdb.set_trace()
     for sample in data:
         assert 'sample_rate' in sample
         assert 'wav' in sample
@@ -233,6 +236,7 @@ def speed_perturb(data, speeds=None):
         Returns:
             Iterable[{key, wav, label, sample_rate}]
     """
+    #import ipdb; ipdb.set_trace()
     if speeds is None:
         speeds = [0.9, 1.0, 1.1]
     for sample in data:
@@ -263,6 +267,7 @@ def compute_fbank(data,
         Returns:
             Iterable[{key, feat, label}]
     """
+    #import ipdb; ipdb.set_trace()
     for sample in data:
         assert 'sample_rate' in sample
         assert 'wav' in sample
@@ -317,6 +322,7 @@ def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
         Returns:
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
+    #import ipdb; ipdb.set_trace()
     if non_lang_syms is not None:
         non_lang_syms_pattern = re.compile(r"(\[[^\[]]+]|<[^<>]+>|{[^{}]+})")
     else:
@@ -381,6 +387,7 @@ def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
         Returns
             Iterable[{key, feat, label}]
     """
+    #import ipdb; ipdb.set_trace()
     for sample in data:
         assert 'feat' in sample
         x = sample['feat']
@@ -414,6 +421,7 @@ def shuffle(data, shuffle_size=10000):
         Returns:
             Iterable[{key, feat, label}]
     """
+    #import ipdb; ipdb.set_trace()
     buf = []
     for sample in data:
         buf.append(sample)
@@ -441,6 +449,7 @@ def sort(data, sort_size=500):
         Returns:
             Iterable[{key, feat, label}]
     """
+    #import ipdb; ipdb.set_trace()
 
     buf = []
     for sample in data:
@@ -466,6 +475,7 @@ def static_batch(data, batch_size=16):
         Returns:
             Iterable[List[{key, feat, label}]]
     """
+    #import ipdb; ipdb.set_trace()
     buf = []
     for sample in data:
         buf.append(sample)
@@ -508,6 +518,7 @@ def dynamic_batch(data, max_frames_in_batch=12000):
 def batch(data, batch_type='static', batch_size=16, max_frames_in_batch=12000):
     """ Wrapper for static/dynamic batch
     """
+    #import ipdb; ipdb.set_trace()
     if batch_type == 'static':
         return static_batch(data, batch_size)
     elif batch_type == 'dynamic':
@@ -525,6 +536,7 @@ def padding(data):
         Returns:
             Iterable[Tuple(keys, feats, labels, feats lengths, label lengths)]
     """
+    #import ipdb; ipdb.set_trace()
     for sample in data:
         assert isinstance(sample, list)
         feats_length = torch.tensor([x['feat'].size(0) for x in sample],

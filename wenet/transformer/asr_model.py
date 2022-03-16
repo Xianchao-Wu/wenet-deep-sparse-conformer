@@ -174,6 +174,7 @@ class ASRModel(torch.nn.Module):
                 decoding_chunk_size=decoding_chunk_size,
                 num_decoding_left_chunks=num_decoding_left_chunks
             )  # (B, maxlen, encoder_dim)
+        #import ipdb; ipdb.set_trace()
         return encoder_out, encoder_mask
 
     def recognize(
@@ -233,6 +234,7 @@ class ASRModel(torch.nn.Module):
         # 2. Decoder forward step by step
         for i in range(1, maxlen + 1):
             # Stop if all batch and all beam produce eos
+            #import ipdb; ipdb.set_trace()
             if end_flag.sum() == running_size:
                 break
             # 2.1 Forward decoder step
@@ -273,6 +275,7 @@ class ASRModel(torch.nn.Module):
             end_flag = torch.eq(hyps[:, -1], self.eos).view(-1, 1)
 
         # 3. Select best of best
+        #import ipdb; ipdb.set_trace()
         scores = scores.view(batch_size, beam_size)
         # TODO: length normalization
         best_scores, best_index = scores.max(dim=-1)

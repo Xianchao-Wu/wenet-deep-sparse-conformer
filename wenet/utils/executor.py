@@ -39,6 +39,7 @@ class Executor:
         num_seen_utts = 0
         with model_context():
             for batch_idx, batch in enumerate(data_loader):
+                #import ipdb; ipdb.set_trace()
                 key, feats, target, feats_lengths, target_lengths = batch
                 feats = feats.to(device)
                 target = target.to(device)
@@ -109,6 +110,7 @@ class Executor:
     def cv(self, model, data_loader, device, args):
         ''' Cross validation on
         '''
+        #import ipdb; ipdb.set_trace()
         model.eval()
         rank = args.get('rank', 0)
         epoch = args.get('epoch', 0)

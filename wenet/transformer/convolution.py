@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 from typeguard import check_argument_types
+import ipdb
 
 
 class ConvolutionModule(nn.Module):
@@ -94,6 +95,7 @@ class ConvolutionModule(nn.Module):
             torch.Tensor: Output tensor (#batch, time, channels).
         """
         # exchange the temporal dimension and the feature dimension
+        #ipdb.set_trace()
         x = x.transpose(1, 2)  # (#batch, channels, time)
 
         # mask batch padding

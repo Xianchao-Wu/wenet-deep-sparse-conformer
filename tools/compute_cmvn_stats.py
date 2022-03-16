@@ -25,6 +25,7 @@ class CollateFunc(object):
         pass
 
     def __call__(self, batch):
+        #import ipdb; ipdb.set_trace()
         mean_stat = torch.zeros(self.feat_dim)
         var_stat = torch.zeros(self.feat_dim)
         number = 0

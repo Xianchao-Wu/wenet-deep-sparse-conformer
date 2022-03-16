@@ -6,6 +6,7 @@
 """Positionwise feed forward layer definition."""
 
 import torch
+import ipdb
 
 
 class PositionwiseFeedForward(torch.nn.Module):
@@ -40,4 +41,5 @@ class PositionwiseFeedForward(torch.nn.Module):
         Returns:
             output tensor, (B, L, D)
         """
+        #ipdb.set_trace()
         return self.w_2(self.dropout(self.activation(self.w_1(xs))))

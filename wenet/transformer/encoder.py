@@ -25,6 +25,7 @@ from wenet.transformer.subsampling import LinearNoSubsampling
 from wenet.utils.common import get_activation
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
+import ipdb
 
 
 class BaseEncoder(torch.nn.Module):
@@ -146,6 +147,7 @@ class BaseEncoder(torch.nn.Module):
             masks: torch.Tensor batch padding mask after subsample
                 (B, 1, T' ~= T/subsample_rate)
         """
+        #ipdb.set_trace()
         T = xs.size(1)
         masks = ~make_pad_mask(xs_lens, T).unsqueeze(1)  # (B, 1, T)
         if self.global_cmvn is not None:
@@ -200,6 +202,7 @@ class BaseEncoder(torch.nn.Module):
             List[torch.Tensor]: conformer cnn cache
 
         """
+        #ipdb.set_trace()
         assert xs.size(0) == 1
         # tmp_masks is just for interface compatibility
         tmp_masks = torch.ones(1,
@@ -282,6 +285,7 @@ class BaseEncoder(torch.nn.Module):
             xs (torch.Tensor): (1, max_len, dim)
             chunk_size (int): decoding chunk size
         """
+        #ipdb.set_trace()
         assert decoding_chunk_size > 0
         # The model is trained by static or dynamic chunk
         assert self.static_chunk_size > 0 or self.use_dynamic_chunk
@@ -335,6 +339,7 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        deepnorm_alpha: float = 1.0,
     ):
         """ Construct TransformerEncoder
 
@@ -354,7 +359,7 @@ class TransformerEncoder(BaseEncoder):
                                      attention_dropout_rate),
                 PositionwiseFeedForward(output_size, linear_units,
                                         dropout_rate), dropout_rate,
-                normalize_before, concat_after) for _ in range(num_blocks)
+                normalize_before, concat_after, deepnorm_alpha) for _ in range(num_blocks)
         ])
 
 
@@ -386,6 +391,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        deepnorm_alpha: float = 1.0,
     ):
         """Construct ConformerEncoder
 
@@ -447,5 +453,6 @@ class ConformerEncoder(BaseEncoder):
                 dropout_rate,
                 normalize_before,
                 concat_after,
+                deepnorm_alpha,
             ) for _ in range(num_blocks)
         ])

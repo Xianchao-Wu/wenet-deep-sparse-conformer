@@ -39,6 +39,7 @@ class DecoderLayer(nn.Module):
         dropout_rate: float,
         normalize_before: bool = True,
         concat_after: bool = False,
+        deepnorm_alpha: float = 1.0,
     ):
         """Construct an DecoderLayer object."""
         super().__init__()
@@ -54,6 +55,7 @@ class DecoderLayer(nn.Module):
         self.concat_after = concat_after
         self.concat_linear1 = nn.Linear(size + size, size)
         self.concat_linear2 = nn.Linear(size + size, size)
+        self.deepnorm_alpha = deepnorm_alpha
 
     def forward(
         self,
@@ -104,9 +106,9 @@ class DecoderLayer(nn.Module):
         if self.concat_after:
             tgt_concat = torch.cat(
                 (tgt_q, self.self_attn(tgt_q, tgt, tgt, tgt_q_mask)), dim=-1)
-            x = residual + self.concat_linear1(tgt_concat)
+            x = residual * self.deepnorm_alpha + self.concat_linear1(tgt_concat)
         else:
-            x = residual + self.dropout(
+            x = residual * self.deepnorm_alpha + self.dropout(
                 self.self_attn(tgt_q, tgt, tgt, tgt_q_mask))
         if not self.normalize_before:
             x = self.norm1(x)
@@ -117,9 +119,9 @@ class DecoderLayer(nn.Module):
         if self.concat_after:
             x_concat = torch.cat(
                 (x, self.src_attn(x, memory, memory, memory_mask)), dim=-1)
-            x = residual + self.concat_linear2(x_concat)
+            x = residual * self.deepnorm_alpha + self.concat_linear2(x_concat)
         else:
-            x = residual + self.dropout(
+            x = residual * self.deepnorm_alpha + self.dropout(
                 self.src_attn(x, memory, memory, memory_mask))
         if not self.normalize_before:
             x = self.norm2(x)
@@ -127,7 +129,7 @@ class DecoderLayer(nn.Module):
         residual = x
         if self.normalize_before:
             x = self.norm3(x)
-        x = residual + self.dropout(self.feed_forward(x))
+        x = residual * self.deepnorm_alpha + self.dropout(self.feed_forward(x))
         if not self.normalize_before:
             x = self.norm3(x)
 

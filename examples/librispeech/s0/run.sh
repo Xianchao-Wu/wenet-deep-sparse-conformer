@@ -7,50 +7,83 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-stage=0 # start from 0 if you need to start from data preparation
-stop_stage=5
+#stage=-1 # start from data download, 
+#stop_stage=-1 # data download only
+
+#stage=0 # 通过id联系.flac文件和文本句子, 
+#stop_stage=0 # 
+
+#stage=1 # 通过id联系.flac文件和文本句子, 
+#stop_stage=1 # 
+
+#stage=2 # 使用sentencepiece来构造vocab (of subwords) 
+#stop_stage=2 # 
+
+#stage=3 # 准备wenet所需要的格式！！！重要 
+#stop_stage=3 # 
+
+#stage=4 # 训练 
+#stop_stage=4 # 
+
+#stage=5 # 测试 
+#stop_stage=5 # 
+
+#stage=6 #  
+#stop_stage=6 # 
+
+stage=7 #  
+stop_stage=7 # 
+
 # data
 data_url=www.openslr.org/resources/12
 # use your own data path
-datadir=/export/data/en-asr-data/OpenSLR
+#datadir=/export/data/en-asr-data/OpenSLR
+datadir=/raid/xianchaow/asr/LibriSpeech.wenet
 # wav data dir
-wave_data=data
+wave_data=data # wave file path
 # Optional train_config
 # 1. conf/train_transformer_large.yaml: Standard transformer
 train_config=conf/train_conformer.yaml
 checkpoint=
-cmvn=true
-do_delta=false
+cmvn=true # cmvn is for mean, variance, frame_number statistics
+do_delta=false # not used...
 
-dir=exp/sp_spec_aug
+dir=exp/sp_spec_aug # model's dir (output dir)
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
-average_num=10
+#average_num=10
+average_num=2
 decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
 
 . tools/parse_options.sh || exit 1;
 
 # bpemode (unigram or bpe)
-nbpe=5000
-bpemode=unigram
+nbpe=5000 # TODO
+bpemode=unigram # TODO
 
-set -e
-set -u
-set -o pipefail
+set -e # 如果任何语句的执行结果不是true，则bash退出
+set -u # 脚本遇到错误时停止，并指出错误的行数信息
+set -o pipefail # 整体脚本的返回值，会变成最后一个返回非零的管道命令的返回值。
 
 train_set=train_960
 dev_set=dev
 recog_set="test_clean test_other dev_clean dev_other"
 
+
+### 下载数据 ###
+
+# le = 小于等于，ge=大于等于
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
   echo "stage -1: Data Download"
   for part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500; do
     local/download_and_untar.sh ${datadir} ${data_url} ${part}
   done
 fi
+
+### 数据准备 ###
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   ### Task dependent. You have to make data the following preparation part by yourself.
@@ -62,10 +95,13 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   done
 fi
 
+### 统计一些信息，mean, variance, frame_num ###
+
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   ### Task dependent. You have to design training and dev sets by yourself.
   ### But you can utilize Kaldi recipes in most cases
   echo "stage 1: Feature Generation"
+
   mkdir -p $wave_data/train_960
   # merge total training data
   for set in train_clean_100 train_clean_360 train_other_500; do
@@ -73,6 +109,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       cat $wave_data/$set/$f >> $wave_data/train_960/$f
     done
   done
+
   mkdir -p $wave_data/dev
   # merge total dev data
   for set in dev_clean dev_other; do
@@ -87,6 +124,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
 fi
 
+### 用sentence piece来构造subword的词典 ###
 
 dict=$wave_data/lang_char/${train_set}_${bpemode}${nbpe}_units.txt
 bpemodel=$wave_data/lang_char/${train_set}_${bpemode}${nbpe}
@@ -118,6 +156,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 
 fi
 
+### 开启训练的大门了 ###
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # Training
@@ -157,6 +196,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   wait
 fi
 
+### 测试模型 ###
+
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Test model, please specify the model you want to test by --checkpoint
   cmvn_opts=
@@ -174,7 +215,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   fi
   # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
   # -1 for full chunk
-  decoding_chunk_size=
+  decoding_chunk_size=-1 # TODO for what?
   ctc_weight=0.5
   # Polling GPU id begin with index 0
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
@@ -220,6 +261,8 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   wait
 
 fi
+
+
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
   # Export the best model you want

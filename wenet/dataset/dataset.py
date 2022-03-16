@@ -37,11 +37,13 @@ class Processor(IterableDataset):
         """ Return an iterator over the source dataset processed by the
             given processor.
         """
+        #import ipdb; ipdb.set_trace()
         assert self.source is not None
         assert callable(self.f)
         return self.f(iter(self.source), *self.args, **self.kw)
 
     def apply(self, f):
+        #import ipdb; ipdb.set_trace()
         assert callable(f)
         return Processor(self, f, *self.args, **self.kw)
 
