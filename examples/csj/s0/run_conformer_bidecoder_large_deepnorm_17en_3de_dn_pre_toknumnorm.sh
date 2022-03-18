@@ -16,9 +16,9 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # 6. make "data.list" files
 # 7. train -> 50 epochs
 
-stage=8 #8 #8 #8 #8 #8 #8 #8 #7 # train -> 50 epochs -> 200 epochs
+stage=7 #8 #8 #8 #8 #8 #8 #8 #8 #7 # train -> 50 epochs -> 200 epochs
 #stop_stage=8 #
-stop_stage=8 # 7 # 8 #7 #
+stop_stage=7 #8 # 7 # 8 #7 #
 
 # data
 #data_url=www.openslr.org/resources/12
@@ -28,13 +28,16 @@ datadir=/workspace/asr/csj
 # output wav data dir
 wave_data=data # wave file path
 # Optional train_config
-train_config=conf/train_conformer_bidecoder_large.yaml
+train_config=conf/train_conformer_bidecoder_large_17en_3de_deepnorm_prenorm_toknumnorm.yaml
 #checkpoint=/workspace/asr/wenet/examples/csj/s0/exp/sp_spec_aug_conformer_bidecoder_large/119.pt
-checkpoint=exp/sp_spec_aug_conformer_bidecoder_large_deepnorm/31.pt
+#checkpoint=
+#exp/sp_spec_aug_conformer_bidecoder_large_deepnorm/31.pt
 cmvn=true # cmvn is for mean, variance, frame_number statistics
 do_delta=false # not used...
 
-dir=exp/sp_spec_aug_conformer_bidecoder_large_deepnorm # model's dir (output dir)
+dir=exp/sp_spec_aug_conformer_bidecoder_large_deepnorm_17en_3de_dn_pre_toknum # model's dir (output dir)
+checkpoint=
+#$dir/2.pt
 
 # use average_checkpoint will get better result
 average_checkpoint=true

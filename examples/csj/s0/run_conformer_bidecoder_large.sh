@@ -217,10 +217,9 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
       --num_workers 0 \
       $cmvn_opts \
       --pin_memory
-  } #&
+  } &
   done
-  #wait
-
+  wait
 fi
 
 ### test model ###

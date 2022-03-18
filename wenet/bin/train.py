@@ -210,7 +210,7 @@ def main():
     #import ipdb; ipdb.set_trace()
     for pname, p in model.named_parameters():
         if p.requires_grad:
-            print(p.numel(), pname)
+            #print(p.numel(), pname)
             if pname.startswith('encoder'):
                 #import ipdb; ipdb.set_trace()
                 deepnorm_init_(pname, p, beta=beta_enc)
