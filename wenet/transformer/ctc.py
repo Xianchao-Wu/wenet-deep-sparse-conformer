@@ -12,6 +12,7 @@ class CTC(torch.nn.Module):
         encoder_output_size: int,
         dropout_rate: float = 0.0,
         reduce: bool = True,
+        normalize_length: bool = True
     ):
         """ Construct CTC module
         Args:
@@ -28,6 +29,7 @@ class CTC(torch.nn.Module):
 
         reduction_type = "sum" if reduce else "none"
         self.ctc_loss = torch.nn.CTCLoss(reduction=reduction_type)
+        self.normalize_length = normalize_length
 
     def forward(self, hs_pad: torch.Tensor, hlens: torch.Tensor,
                 ys_pad: torch.Tensor, ys_lens: torch.Tensor) -> torch.Tensor:
@@ -47,7 +49,9 @@ class CTC(torch.nn.Module):
         ys_hat = ys_hat.log_softmax(2)
         loss = self.ctc_loss(ys_hat, ys_pad, hlens, ys_lens)
         # Batch-size average
-        loss = loss / ys_hat.size(1) # TODO consider also support token.num based norm?
+        denom = torch.sum(ys_lens) if self.normalize_length else ys_hat.size(1) 
+        #loss = loss / ys_hat.size(1) # TODO consider also support token.num based norm?
+        loss = loss / denom # TODO consider also support token.num based norm?
         return loss
 
     def log_softmax(self, hs_pad: torch.Tensor) -> torch.Tensor:

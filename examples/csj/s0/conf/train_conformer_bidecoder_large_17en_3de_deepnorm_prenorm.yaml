@@ -36,7 +36,7 @@ decoder_conf:
 model_conf:
     ctc_weight: 0.3
     lsm_weight: 0.1     # label smoothing option
-    length_normalized_loss: false # NOTE, true for word.length norm loss; false for batch-size norm loss, true is better?
+    length_normalized_loss: true # NOTE, true for word.length norm loss; false for batch-size norm loss, true is better?
     reverse_weight: 0.3 # 0.3 NOTE
 
 # dataset related
@@ -70,10 +70,10 @@ dataset_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 24
+        batch_size: 8
 
 grad_clip: 5
-accum_grad: 1
+accum_grad: 4
 max_epoch: 120
 log_interval: 100
 
