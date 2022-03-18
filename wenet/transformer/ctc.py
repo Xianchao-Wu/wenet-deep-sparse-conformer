@@ -49,7 +49,7 @@ class CTC(torch.nn.Module):
         ys_hat = ys_hat.log_softmax(2)
         loss = self.ctc_loss(ys_hat, ys_pad, hlens, ys_lens)
         # Batch-size average
-        denom = torch.sum(ys_lens) if self.normalize_length else ys_hat.size(1) 
+        denom = torch.sum(ys_lens).item() if self.normalize_length else ys_hat.size(1) 
         #loss = loss / ys_hat.size(1) # TODO consider also support token.num based norm?
         loss = loss / denom # TODO consider also support token.num based norm?
         return loss
