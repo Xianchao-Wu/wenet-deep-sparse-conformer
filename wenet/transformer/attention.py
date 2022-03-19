@@ -373,24 +373,28 @@ class ProbMultiHeadedAttention(MultiHeadedAttention):
         U_part = L_K if L_K <= self.keep_minlen else U_part
         u = L_Q if L_Q <= self.keep_minlen else u
 
-        # step 1
-        scores_top, index = self.prob_QK(q, k, sample_k=U_part, n_top_q=u, index=None)
+        if U_part < L_K or u < L_Q:
+            # step 1
+            scores_top, index = self.prob_QK(q, k, sample_k=U_part, n_top_q=u, index=None)
 
-        scale = 1./math.sqrt(D)
-        scores_top = scores_top * scale
+            scale = 1./math.sqrt(D)
+            scores_top = scores_top * scale
 
-        # step 2
-        context = self.get_initial_context(v, L_Q)
+            # step 2
+            context = self.get_initial_context(v, L_Q)
 
-        # step 3
-        context = self.update_context(context, v, scores_top, index, L_Q, mask)
-        # context = [batch, head, L_Q, dim]
+            # step 3
+            context = self.update_context(context, v, scores_top, index, L_Q, mask)
+            # context = [batch, head, L_Q, dim]
 
-        # post process        
-        context = context.transpose(1,2).contiguous().view(B, -1, H*D)
-        context = self.linear_out(context)
-
-        return context 
+            # post process        
+            context = context.transpose(1,2).contiguous().view(B, -1, H*D)
+            context = self.linear_out(context)
+            return context 
+        else:
+            # use original logic
+            scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
+            return self.forward_attention(v, scores, mask)
 
 
 class ProbRelPositionMultiHeadedAttention(ProbMultiHeadedAttention):
@@ -462,43 +466,45 @@ class ProbRelPositionMultiHeadedAttention(ProbMultiHeadedAttention):
         U_part = L_K if L_K <= self.keep_minlen else U_part
         u = L_Q if L_Q <= self.keep_minlen else u
 
-        # step 1, better let index2 = index1 
-        scores_top1, index1 = self.prob_QK(q_with_bias_u, k, 
-                                           sample_k=U_part, n_top_q=u, index=None)
-        scores_top2, _ = self.prob_QK(q_with_bias_v, p, 
-                                      sample_k=U_part, n_top_q=u, index=index1)
+        if U_part < L_K or u < L_Q:
+            # ProbAttention NOTE
+            # step 1, better let index2 = index1 
+            scores_top1, index1 = self.prob_QK(q_with_bias_u, k, 
+                                               sample_k=U_part, n_top_q=u, index=None)
+            scores_top2, _ = self.prob_QK(q_with_bias_v, p, 
+                                          sample_k=U_part, n_top_q=u, index=index1)
 
-        scale = 1./math.sqrt(D)
-        scores_top = (scores_top1 + scores_top2) * scale
+            scale = 1./math.sqrt(D)
+            scores_top = (scores_top1 + scores_top2) * scale
 
-        # step 2
-        context = self.get_initial_context(v, L_Q)
+            # step 2
+            context = self.get_initial_context(v, L_Q)
 
-        # step 3
-        context = self.update_context(context, v, scores_top, index1, L_Q, mask)
-        # context = [batch, head, L_Q, dim]
+            # step 3
+            context = self.update_context(context, v, scores_top, index1, L_Q, mask)
+            # context = [batch, head, L_Q, dim]
 
-        # post process        
-        context = context.transpose(1,2).contiguous().view(B, -1, H*D)
-        context = self.linear_out(context)
+            # post process        
+            context = context.transpose(1,2).contiguous().view(B, -1, H*D)
+            context = self.linear_out(context)
 
-        return context 
+            return context 
+        else:
+            # use original logic
+            # compute attention score
+            # first compute matrix a and matrix c
+            # as described in https://arxiv.org/abs/1901.02860 Section 3.3
+            # (batch, head, time1, time2)
+            matrix_ac = torch.matmul(q_with_bias_u, k.transpose(-2, -1))
 
-        # compute attention score
-        # first compute matrix a and matrix c
-        # as described in https://arxiv.org/abs/1901.02860 Section 3.3
-        # (batch, head, time1, time2)
-        ### matrix_ac = torch.matmul(q_with_bias_u, k.transpose(-2, -1))
+            # compute matrix b and matrix d
+            # (batch, head, time1, time2)
+            matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
+            # Remove rel_shift since it is useless in speech recognition,
+            # and it requires special attention for streaming.
+            # matrix_bd = self.rel_shift(matrix_bd)
 
-        # compute matrix b and matrix d
-        # (batch, head, time1, time2)
-        ### matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
-        # Remove rel_shift since it is useless in speech recognition,
-        # and it requires special attention for streaming.
-        # matrix_bd = self.rel_shift(matrix_bd)
+            scores = (matrix_ac + matrix_bd) / math.sqrt(self.d_k)  
+            # (batch, head, time1, time2)
 
-        ### scores = (matrix_ac + matrix_bd) / math.sqrt(
-        ###    self.d_k)  # (batch, head, time1, time2)
-
-        ### return self.forward_attention(v, scores, mask)
-
+            return self.forward_attention(v, scores, mask)
