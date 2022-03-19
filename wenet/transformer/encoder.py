@@ -11,6 +11,9 @@ from typeguard import check_argument_types
 
 from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.attention import RelPositionMultiHeadedAttention
+from wenet.transformer.attention import ProbMultiHeadedAttention
+from wenet.transformer.attention import ProbRelPositionMultiHeadedAttention
+
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.embedding import RelPositionalEncoding
@@ -385,13 +388,15 @@ class ConformerEncoder(BaseEncoder):
         use_dynamic_left_chunk: bool = False,
         positionwise_conv_kernel_size: int = 1,
         macaron_style: bool = True,
-        selfattention_layer_type: str = "rel_selfattn",
         activation_type: str = "swish",
         use_cnn_module: bool = True,
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
         deepnorm_alpha: float = 1.0,
+        selfattention_layer_type: str = "relpos_attn",
+        factor: float = 5.0,
+        keep_minlen: float = 15.0,
     ):
         """Construct ConformerEncoder
 
@@ -402,8 +407,10 @@ class ConformerEncoder(BaseEncoder):
             macaron_style (bool): Whether to use macaron style for
                 positionwise layer.
             selfattention_layer_type (str): Encoder attention layer type,
-                the parameter has no effect now, it's just for configure
-                compatibility.
+                'attn' for MultiHeadedAttention,
+                'relpos_attn' for RelPositionMultiHeadedAttention,
+                'prob_attn' for ProbMultiHeadedAttention,
+                'prob_relpos_attn' for ProbRelPositionMultiHeadedAttention. 
             activation_type (str): Encoder activation function type.
             use_cnn_module (bool): Whether to use convolution module.
             cnn_module_kernel (int): Kernel size of convolution module.
@@ -419,15 +426,24 @@ class ConformerEncoder(BaseEncoder):
         activation = get_activation(activation_type)
 
         # self-attention module definition
-        if pos_enc_layer_type == "no_pos":
-            encoder_selfattn_layer = MultiHeadedAttention
-        else:
-            encoder_selfattn_layer = RelPositionMultiHeadedAttention
         encoder_selfattn_layer_args = (
             attention_heads,
             output_size,
             attention_dropout_rate,
         )
+
+        if selfattention_layer_type == 'attn':
+            encoder_selfattn_layer = MultiHeadedAttention
+        elif selfattention_layer_type == 'prob_attn':
+            encoder_selfattn_layer = ProbMultiHeadedAttention
+            encoder_selfattn_layer_args += (factor, keep_minlen)
+        elif selfattention_layer_type == 'prob_relpos_attn':
+            encoder_selfattn_layer = ProbRelPositionMultiHeadedAttention
+            encoder_selfattn_layer_args += (factor, keep_minlen)
+        else:
+            # default, 'relpos_attn'
+            encoder_selfattn_layer = RelPositionMultiHeadedAttention
+
         # feed-forward module definition
         positionwise_layer = PositionwiseFeedForward
         positionwise_layer_args = (
