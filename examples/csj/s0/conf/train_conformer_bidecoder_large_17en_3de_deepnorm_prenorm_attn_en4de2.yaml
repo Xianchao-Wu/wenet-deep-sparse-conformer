@@ -18,6 +18,7 @@ encoder_conf:
     selfattention_layer_type: 'prob_relpos_attn' # four choices: 'attn', 'relpos_attn', 'prob_attn', 'prob_relpos_attn'
     factor: 5.0 # k-sample's factor for factor*ln(L_K); and q's factor for factor*ln(L_Q)
     keep_minlen: 15.0
+    k_sample_pos : 'middle' # 'first', 'last', 'middle'
     cnn_module_norm: 'layer_norm'
     deepnorm_alpha: 1.0
 
@@ -36,6 +37,7 @@ decoder_conf:
     selfattention_layer_type: 'prob_attn' # NOTE two choices: 'attn', 'prob_attn'
     factor: 5.0 # k-sample's factor for factor*ln(L_K); and q's factor for factor*ln(L_Q)
     keep_minlen: 15.0
+    k_sample_pos : 'middle' # 'first', 'last', 'middle'
 
 # hybrid CTC/attention
 model_conf:

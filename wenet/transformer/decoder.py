@@ -55,7 +55,8 @@ class TransformerDecoder(torch.nn.Module):
         deepnorm_alpha: float = 1.0,
         selfattention_layer_type: str = 'prob_attn',
         factor: float = 5.0, 
-        keep_minlen: float = 15.0
+        keep_minlen: float = 15.0,
+        k_sample_pos: str = "middle",
     ):
         assert check_argument_types()
         super().__init__()
@@ -83,7 +84,7 @@ class TransformerDecoder(torch.nn.Module):
         else:
             # 'prob_attn'
             decoder_selfattn_layer = ProbMultiHeadedAttention
-            decoder_selfattn_layer_args += (factor, keep_minlen)
+            decoder_selfattn_layer_args += (factor, keep_minlen, k_sample_pos)
 
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
@@ -235,7 +236,8 @@ class BiTransformerDecoder(torch.nn.Module):
         deepnorm_alpha: float = 1.0,
         selfattention_layer_type: str = 'prob_attn',
         factor: float = 5.0, 
-        keep_minlen: float = 15.0
+        keep_minlen: float = 15.0,
+        k_sample_pos: str = 'middle',
     ):
 
         assert check_argument_types()
@@ -246,7 +248,7 @@ class BiTransformerDecoder(torch.nn.Module):
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before, concat_after,
             deepnorm_alpha, 
-            selfattention_layer_type, factor, keep_minlen)
+            selfattention_layer_type, factor, keep_minlen, k_sample_pos)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
@@ -254,7 +256,7 @@ class BiTransformerDecoder(torch.nn.Module):
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before, concat_after,
             deepnorm_alpha,
-            selfattention_layer_type, factor, keep_minlen)
+            selfattention_layer_type, factor, keep_minlen, k_sample_pos)
 
     def forward(
         self,

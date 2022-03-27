@@ -237,13 +237,17 @@ class ProbMultiHeadedAttention(MultiHeadedAttention):
         n_head (int): The number of heads.
         n_feat (int): The number of features.
         dropout_rate (float): Dropout rate.
+        factor (float) : for replacing L_Q/L_K by factor * ln(L_Q) or factor * ln(L_K)
+        keep_minlen (float) : if L_Q or L_K <= keep_minlen, do not use q or k reduce!
+        k_sample_pos (str) : 'first', 'last' or 'middle' sample_k from K set
     """
     def __init__(self, n_head: int, n_feat: int, dropout_rate: float, 
-                 factor: float=5.0, keep_minlen: float=15.0):
+            factor: float=5.0, keep_minlen: float=15.0, k_sample_pos: str="middle"):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate)
         self.factor = factor
         self.keep_minlen = keep_minlen 
+        self.k_sample_pos = k_sample_pos
         # NOTE if L_Q or L_K <= keep_minlen, do not do factor * ln(L_Q or L_K)
 
 
@@ -257,17 +261,37 @@ class ProbMultiHeadedAttention(MultiHeadedAttention):
         # easier!
         if index is None:
             # calculate the sampled Q_K
-            K_expand = K.unsqueeze(-3).expand(B, H, L_Q, L_K, E)
+            #K_expand = K.unsqueeze(-3).expand(B, H, L_Q, L_K, E)
             # sample "sample_k" number of key vectors from K
             #print(L_K, L_Q, sample_k)
             #print(type(L_K), type(L_Q), type(sample_k))
 
-            # NOTE torch.script do not support torch.randint!!!
+            # NOTE torch.jit.script do not support torch.randint!!!
             ###index_sample = torch.randint(L_K, (L_Q, sample_k)) # real U = U_part(factor*ln(L_k))*L_q
             ###K_sample = K_expand[:, :, torch.arange(L_Q).unsqueeze(1), index_sample, :]
-            K_sample = K_expand
+            #K_sample = K_expand
 
-            Q_K_sample = torch.matmul(Q.unsqueeze(-2), K_sample.transpose(-2, -1)).squeeze(-2)
+            # simply take the first sample_K elements of K? NOTE
+            K_expand = K.expand(B, H, L_K, E)
+            if self.k_sample_pos == 'first':
+                # case 1: first sample_k
+                K_sample = K_expand[torch.arange(B)[:, None, None],
+                                    torch.arange(H)[None, :, None],
+                                    torch.arange(sample_k)[None, None, :], :]
+            elif self.k_sample_pos == 'last':
+                # case 2: last sample_k
+                K_sample = K_expand[torch.arange(B)[:, None, None],
+                                    torch.arange(H)[None, :, None],
+                                    torch.arange(L_K - sample_k, L_K)[None, None, :], :]
+            else:
+                # case 3: middle sample_k
+                start_idx = (L_K - sample_k)//2
+                K_sample = K_expand[torch.arange(B)[:, None, None],
+                                    torch.arange(H)[None, :, None],
+                                    torch.arange(start_idx, start_idx + sample_k)[None, None, :], :]
+
+            #Q_K_sample = torch.matmul(Q.unsqueeze(-2), K_sample.transpose(-2, -1)).squeeze(-2)
+            Q_K_sample = torch.matmul(Q, K_sample.transpose(-2, -1))
 
             # find the Top_k(=n_top_q) query with sparisty measurement
             M = Q_K_sample.max(-1)[0] - torch.div(Q_K_sample.sum(-1), L_K)
@@ -399,7 +423,7 @@ class ProbMultiHeadedAttention(MultiHeadedAttention):
 
 class ProbRelPositionMultiHeadedAttention(ProbMultiHeadedAttention):
     """Multi-Head Attention layer with relative position encoding.
-    Paper: https://arxiv.org/abs/1901.02860
+    Paper: https://arxiv.org/abs/1901.02860 [transformer-xl]
        together with, Multi-Head Attention layer with ProbAttention (AAAI2021 best paper Informer).
     Paper: https://arxiv.org/abs/2012.07436
     Args:
@@ -408,11 +432,12 @@ class ProbRelPositionMultiHeadedAttention(ProbMultiHeadedAttention):
         dropout_rate (float): Dropout rate.
         factor (float) : for replacing L_Q/L_K by factor * ln(L_Q) or factor * ln(L_K)
         keep_minlen (float) : if L_Q or L_K <= keep_minlen, do not use q or k reduce!
+        k_sample_pos (str) : 'first', 'last' or 'middle' sample_k from K set
     """
     def __init__(self, n_head: int, n_feat: int, dropout_rate: float, 
-                 factor: float=5.0, keep_minlen: float=15.0):
+            factor: float=5.0, keep_minlen: float=15.0, k_sample_pos: str='middle'):
         """Construct an RelPositionMultiHeadedAttention object."""
-        super().__init__(n_head, n_feat, dropout_rate, factor, keep_minlen)
+        super().__init__(n_head, n_feat, dropout_rate, factor, keep_minlen, k_sample_pos)
         # linear transformation for positional encoding
         self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
         # these two learnable bias are used in matrix c and matrix d

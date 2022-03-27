@@ -397,6 +397,7 @@ class ConformerEncoder(BaseEncoder):
         selfattention_layer_type: str = "relpos_attn",
         factor: float = 5.0,
         keep_minlen: float = 15.0,
+        k_sample_pos: str = "middle",
     ):
         """Construct ConformerEncoder
 
@@ -436,10 +437,10 @@ class ConformerEncoder(BaseEncoder):
             encoder_selfattn_layer = MultiHeadedAttention
         elif selfattention_layer_type == 'prob_attn':
             encoder_selfattn_layer = ProbMultiHeadedAttention
-            encoder_selfattn_layer_args += (factor, keep_minlen)
+            encoder_selfattn_layer_args += (factor, keep_minlen, k_sample_pos)
         elif selfattention_layer_type == 'prob_relpos_attn':
             encoder_selfattn_layer = ProbRelPositionMultiHeadedAttention
-            encoder_selfattn_layer_args += (factor, keep_minlen)
+            encoder_selfattn_layer_args += (factor, keep_minlen, k_sample_pos)
         else:
             # default, 'relpos_attn'
             encoder_selfattn_layer = RelPositionMultiHeadedAttention
