@@ -11,7 +11,7 @@ def readtst(tstfn):
             outlist.append(aline)
     return outlist
 
-def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn):
+def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn, is_comb=False):
     test1list = readtst(test1fn)
     test2list = readtst(test2fn)
     test3list = readtst(test3fn)
@@ -22,7 +22,8 @@ def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn):
     outt3list = list()
 
     for afile in os.listdir(xmlpath):
-        if not afile.endswith('.xml.simp'):
+        aflag = '.xml.simp.comb' if is_comb else '.xml.simp'
+        if not afile.endswith(aflag):
             continue
         afile2 = xmlpath + '/' + afile
         aid = afile.split('.')[0]
@@ -111,13 +112,13 @@ def gen_wav_scp(xmllist, wavlist, outpath):
 
 def prep_text_wavscp(
         xmlpath, wavpath, test1fn, test2fn, test3fn,
-        outtrainpath, out1path, out2path, out3path):
+        outtrainpath, out1path, out2path, out3path, is_comb=False):
 
     trainlist, t1list, t2list, t3list = split_train_tests_xml(
         xmlpath,
         test1fn,
         test2fn,
-        test3fn)
+        test3fn, is_comb=is_comb)
     wavlist = all_wavs(wavpath)
 
     gen_text(trainlist, outtrainpath)
@@ -135,7 +136,7 @@ if __name__ == '__main__':
         print(
             "Usage: {}".format(sys.argv[0]) + "<xmlpath> " +
             "<wavpath> <test1fn> <test2fn> <test3fn> " +
-            "<outtrainpath> <out1path> <out2path> <out3path>")
+            "<outtrainpath> <out1path> <out2path> <out3path> [is.comb=True/False, default=False]")
         exit(1)
 
     xmlpath = sys.argv[1]
@@ -149,6 +150,10 @@ if __name__ == '__main__':
     out2path = sys.argv[8]
     out3path = sys.argv[9]
 
+    is_comb = False
+    if len(sys.argv) >= 11:
+        is_comb = bool(sys.argv[10])
+
     prep_text_wavscp(xmlpath, wavpath, test1fn,
                      test2fn, test3fn, outtrainpath,
-                     out1path, out2path, out3path)
+                     out1path, out2path, out3path, is_comb=is_comb)
