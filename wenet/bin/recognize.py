@@ -50,6 +50,10 @@ def get_args():
                         type=int,
                         default=10,
                         help='beam size for search')
+    parser.add_argument('--out_beam',
+                        action='store_true',
+                        default=False,
+                        help='output beam to result file for system ensemble')
     parser.add_argument('--penalty',
                         type=float,
                         default=0.0,
@@ -175,8 +179,11 @@ def main():
             target = target.to(device)
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
+
+            hyps_nbest, scores_nbest = None, None
+
             if args.mode == 'attention':
-                hyps, _ = model.recognize(
+                hyps, _, hyps_nbest, scores_nbest = model.recognize(
                     feats,
                     feats_lengths,
                     beam_size=args.beam_size,
@@ -196,17 +203,20 @@ def main():
             # with other batch decoding mode
             elif args.mode == 'ctc_prefix_beam_search':
                 assert (feats.size(0) == 1)
-                hyp, _ = model.ctc_prefix_beam_search(
+                hyp, hyps_nbest = model.ctc_prefix_beam_search(
                     feats,
                     feats_lengths,
                     args.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
-                hyps = [hyp]
+                hyps = [hyp[0]] # TODO original was hyps=[hyp] yet hyp=((1396, ..., 1670), logp)
+                if args.out_beam:
+                    scores_nbest = [[y[1] for y in hyps_nbest]]
+                    hyps_nbest = [hyps_nbest]
             elif args.mode == 'attention_rescoring':
                 assert (feats.size(0) == 1)
-                hyp, _ = model.attention_rescoring(
+                hyp, _, hyps_nbest, scores_nbest = model.attention_rescoring(
                     feats,
                     feats_lengths,
                     args.beam_size,
@@ -216,6 +226,9 @@ def main():
                     simulate_streaming=args.simulate_streaming,
                     reverse_weight=args.reverse_weight)
                 hyps = [hyp]
+                if args.out_beam:
+                    hyps_nbest = [hyps_nbest]
+                    scores_nbest = [scores_nbest]
             for i, key in enumerate(keys):
                 content = ''
                 for w in hyps[i]:
@@ -224,6 +237,21 @@ def main():
                     content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
+
+                
+                # write n-best result to fout!
+                if args.out_beam and hyps_nbest is not None and scores_nbest is not None:
+                    for j, hyp in enumerate(hyps_nbest[i]):
+                        # (prefix, prob from ctc)
+                        hyp_prefix = hyp.cpu().numpy() if isinstance(hyp, torch.Tensor) else hyp[0] 
+                        content = ''
+                        for w in hyp_prefix:
+                            if w == eos:
+                                break
+                            content += char_dict[w]
+                        out_row = 'beam: {} {} {} {}'.format(key, j, scores_nbest[i][j], content)
+                        logging.info(out_row)
+                        fout.write(out_row + '\n')
 
 
 if __name__ == '__main__':

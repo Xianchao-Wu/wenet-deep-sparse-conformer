@@ -16,9 +16,9 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # 6. make "data.list" files
 # 7. train -> 50 epochs
 
-stage=7 #7 # train -> 50 epochs -> 200 epochs
+stage=8 #7 #7 # train -> 50 epochs -> 200 epochs
 #stop_stage=8 #
-stop_stage=7 #7 #
+stop_stage=8 #7 #7 #
 
 # data
 #data_url=www.openslr.org/resources/12
@@ -41,11 +41,12 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 average_num=10
-#decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
+decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
 #decode_modes="attention_rescoring" # ctc_greedy_search ctc_prefix_beam_search attention"
 #decode_modes="ctc_greedy_search" # ctc_prefix_beam_search attention"
 #decode_modes="ctc_prefix_beam_search" # attention"
-decode_modes="attention"
+#decode_modes="attention_rescoring" # ok for n-best output
+#decode_modes="attention" # ok for n-best output
 
 . tools/parse_options.sh || exit 1;
 
@@ -247,7 +248,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   # Polling GPU id begin with index 0
   #num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   num_gpus=1 #$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-  idx=0
+  idx=2
   decode_checkpoint=$dir/84.pt
   for test in $recog_set; do
     for mode in ${decode_modes}; do
@@ -256,19 +257,23 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
         test_dir=$dir/${test}_${mode}
         mkdir -p $test_dir
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-        python -m ipdb wenet/bin/recognize.py --gpu $gpu_id \
+        #python -m ipdb wenet/bin/recognize.py --gpu $gpu_id \
+		#--out_beam \
+        python wenet/bin/recognize.py --gpu $gpu_id \
           --mode $mode \
           --config $dir/train.yaml \
           --data_type raw \
-          --test_data $wave_data/$test/data.list \
+          --test_data $wave_data/$test/data.list.10lines \
           --checkpoint $decode_checkpoint \
-          --beam_size 10 \
-          --batch_size 2 \
+          --beam_size 20 \
+          --batch_size 1 \
           --penalty 0.0 \
           --dict $dict \
-          --result_file $test_dir/text_bpe \
+          --result_file $test_dir/text_bpe_nbest \
           --ctc_weight $ctc_weight \
           ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+
+		grep -v "^beam:" $test_dir/text_bpe_nbest > $test_dir/text_bpe
 
         cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
         cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp
