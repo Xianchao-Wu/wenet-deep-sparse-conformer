@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
+echo $stage
+echo $stop_stage
 
 . ./path.sh || exit 1;
 
@@ -15,9 +17,16 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # 5. sentence piece's bpe vocabulary
 # 6. make "data.list" files
 # 7. train -> 50 epochs
+#echo $stage
+#echo $stop_stage
 
 stage=7 # train -> 50 epochs
 stop_stage=8 #
+
+echo $stage
+echo $stop_stage
+
+exit 0
 
 # data
 #data_url=www.openslr.org/resources/12
