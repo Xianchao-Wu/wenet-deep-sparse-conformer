@@ -17,7 +17,7 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # 7. train -> 50 epochs
 
 stage=7 # train -> 50 epochs
-stop_stage=8 #
+stop_stage=7 #8 #
 
 # data
 #data_url=www.openslr.org/resources/12
@@ -28,11 +28,12 @@ datadir=/workspace/asr/csj
 wave_data=data # wave file path
 # Optional train_config
 train_config=conf/train_conformer.yaml
-checkpoint=/workspace/asr/wenet/examples/csj/s0/exp/sp_spec_aug/49.pt
+#checkpoint=/workspace/asr/wenet/examples/csj/s0/exp/sp_spec_aug/49.pt
 cmvn=true # cmvn is for mean, variance, frame_number statistics
 do_delta=false # not used...
 
 dir=exp/sp_spec_aug_conformer # model's dir (output dir)
+checkpoint=
 
 # use average_checkpoint will get better result
 average_checkpoint=true

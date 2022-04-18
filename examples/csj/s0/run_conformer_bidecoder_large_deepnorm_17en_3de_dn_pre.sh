@@ -16,9 +16,9 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # 6. make "data.list" files
 # 7. train -> 50 epochs
 
-stage=7 #8 #8 #8 #8 #8 #8 #8 #8 #7 # train -> 50 epochs -> 200 epochs
+stage=8 #7 #8 #8 #8 #8 #8 #8 #8 #8 #7 # train -> 50 epochs -> 200 epochs
 #stop_stage=8 #
-stop_stage=7 #8 # 7 # 8 #7 #
+stop_stage=8 #7 #8 # 7 # 8 #7 #
 
 # data
 #data_url=www.openslr.org/resources/12
