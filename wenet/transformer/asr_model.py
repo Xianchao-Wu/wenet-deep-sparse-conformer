@@ -283,7 +283,10 @@ class ASRModel(torch.nn.Module):
             batch_size, dtype=torch.long, device=device) * beam_size
         best_hyps = torch.index_select(hyps, dim=0, index=best_hyps_index)
         best_hyps = best_hyps[:, 1:]
-        return best_hyps, best_scores
+        hyps = hyps.view(batch_size, beam_size, -1)
+        hyps = hyps[:, :, 1:]
+        #import ipdb; ipdb.set_trace()
+        return best_hyps, best_scores, hyps, scores
 
     def ctc_greedy_search(
         self,
@@ -445,7 +448,8 @@ class ASRModel(torch.nn.Module):
                                                beam_size, decoding_chunk_size,
                                                num_decoding_left_chunks,
                                                simulate_streaming)
-        return hyps[0]
+        # return n-best for system ensemble
+        return hyps[0], hyps 
 
     def attention_rescoring(
         self,
@@ -526,7 +530,9 @@ class ASRModel(torch.nn.Module):
         # Only use decoder score for rescoring
         best_score = -float('inf')
         best_index = 0
-        for i, hyp in enumerate(hyps):
+        scores = list()
+        for i, hyp in enumerate(hyps): 
+            # hyp = (prefix string, prob)
             score = 0.0
             for j, w in enumerate(hyp[0]):
                 score += decoder_out[i][j][w]
@@ -540,10 +546,12 @@ class ASRModel(torch.nn.Module):
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
             # add ctc score
             score += hyp[1] * ctc_weight
+            scores.append(score)
             if score > best_score:
                 best_score = score
                 best_index = i
-        return hyps[best_index][0], best_score
+        # TODO return all the n-best for system ensemble
+        return hyps[best_index][0], best_score, hyps, scores
 
     @torch.jit.export
     def subsampling_rate(self) -> int:

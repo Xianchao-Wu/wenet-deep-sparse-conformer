@@ -16,9 +16,8 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # 6. make "data.list" files
 # 7. train -> 50 epochs
 
-stage=8 #7 #7 # train -> 50 epochs -> 200 epochs
-#stop_stage=8 #
-stop_stage=8 #7 #7 #
+stage=3 # train -> 50 epochs
+stop_stage=6 #
 
 # data
 #data_url=www.openslr.org/resources/12
@@ -26,15 +25,15 @@ stop_stage=8 #7 #7 #
 datadir=/workspace/asr/csj
 
 # output wav data dir
-wave_data=data # wave file path
+wave_data=data_3splus # wave file path
+mkdir -p ${wave_data}
 # Optional train_config
-train_config=conf/train_conformer_bidecoder_large.yaml
-#checkpoint=/workspace/asr/wenet/examples/csj/s0/exp/sp_spec_aug_conformer_bidecoder_large/119.pt
-checkpoint=
+train_config=conf/train_conformer.yaml
+checkpoint=/workspace/asr/wenet/examples/csj/s0/exp/sp_spec_aug/49.pt
 cmvn=true # cmvn is for mean, variance, frame_number statistics
 do_delta=false # not used...
 
-dir=exp/sp_spec_aug_conformer_bidecoder_large # model's dir (output dir)
+dir=exp/sp_spec_aug_conformer # model's dir (output dir)
 
 # use average_checkpoint will get better result
 average_checkpoint=true
@@ -42,11 +41,6 @@ decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 average_num=10
 decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
-#decode_modes="attention_rescoring" # ctc_greedy_search ctc_prefix_beam_search attention"
-#decode_modes="ctc_greedy_search" # ctc_prefix_beam_search attention"
-#decode_modes="ctc_prefix_beam_search" # attention"
-#decode_modes="attention_rescoring" # ok for n-best output
-#decode_modes="attention" # ok for n-best output
 
 . tools/parse_options.sh || exit 1;
 
@@ -60,11 +54,13 @@ set -o pipefail # return value of the whole bash = final line executed's result
 
 train_set=train
 dev_set=dev
-#recog_set="test1 test2 test3"
-recog_set="test1" # test2 test3"
+recog_set="test1 test2 test3"
 
 ### CSJ data is not free!
 # buying URL: https://ccd.ninjal.ac.jp/csj/en/
+
+in_wav_path=$datadir/WAV
+xml_simp_path=${wave_data}/xml
 
 ### data preparing - split xml by sentences ###
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -73,11 +69,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo "stage 1: Data preparation -> xml preprocessing "
   echo "  -> extract [start.time, end.time, text] from raw xml files"
   python ./csj_tools/wn.0.parse.py $datadir ${wave_data}
+  
+  ### perform 3second+ combination TODO
+  python ./csj_tools/wn.1.split_pre_xml_merge.py ${xml_simp_path} 
 fi
 
-in_wav_path=$datadir/WAV
-xml_simp_path=${wave_data}/xml
-#wav_split_path=${wave_data}/wav.2
 wav_split_path=${wave_data}/wav
 mkdir -p ${wav_split_path}
 
@@ -87,7 +83,8 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo "  -> split wav file by xml.simp's [start.time, end.time, text] format"
   # in addition, 2ch to 1ch!
 
-  python ./csj_tools/wn.1.split_wav.py ${in_wav_path} ${xml_simp_path} ${wav_split_path}
+  # True for is_comb=True
+  python ./csj_tools/wn.1.split_wav.py ${in_wav_path} ${xml_simp_path} ${wav_split_path} True
 fi
 
 ### data preparing - generate "text" and "wav.scp" files ###
@@ -108,10 +105,11 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   mkdir -p $outt2
   mkdir -p $outt3
 
+  # True for is.comb=True -> 3 seconds or plus
   python ./csj_tools/wn.2.prep.text.py \
     ${xml_simp_path} ${wav_split_path} \
     $t1fn $t2fn $t3fn \
-    $outtrain $outt1 $outt2 $outt3
+    $outtrain $outt1 $outt2 $outt3 True
 fi
 
 minsec=0.1
@@ -143,7 +141,7 @@ echo "dictionary: ${dict}"
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   ### Task dependent. You have to check non-linguistic symbols used in the corpus.
   echo "stage 5: Dictionary and Json Data Preparation"
-  mkdir -p data/lang_char/
+  mkdir -p ${wave_data}/lang_char/
 
   echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
   echo "<unk> 1" >> ${dict} # <unk> must be 1
@@ -191,19 +189,16 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
-  #dist_backend="gloo"
-  dist_backend="nccl"
+  dist_backend="gloo"
   cmvn_opts=
   $cmvn && cmvn_opts="--cmvn $wave_data/${train_set}/global_cmvn"
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
-  num_gpus=1
-  # debug wenet code only usage:
   for ((i = 0; i < $num_gpus; ++i)); do
   {
     gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
-    python -m ipdb wenet/bin/train.py --gpu $gpu_id \
+    python wenet/bin/train.py --gpu $gpu_id \
       --config $train_config \
       --data_type raw \
       --symbol_table $dict \
@@ -215,7 +210,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
       --ddp.world_size $num_gpus \
       --ddp.rank $i \
       --ddp.dist_backend $dist_backend \
-      --num_workers 0 \
+      --num_workers 1 \
       $cmvn_opts \
       --pin_memory
   } &
@@ -230,12 +225,10 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   cmvn_opts=
   $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
   mkdir -p $dir/test
-  decode_checkpoint=$dir/avg_${average_num}.pt
-  average_checkpoint=false
   if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
-    python -m ipdb wenet/bin/average_model.py \
+    python wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
       --num ${average_num} \
@@ -246,10 +239,8 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   decoding_chunk_size=-1
   ctc_weight=0.5
   # Polling GPU id begin with index 0
-  #num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-  num_gpus=1 #$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-  idx=2
-  decode_checkpoint=$dir/84.pt
+  num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
+  idx=0
   for test in $recog_set; do
     for mode in ${decode_modes}; do
     {
@@ -257,23 +248,19 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
         test_dir=$dir/${test}_${mode}
         mkdir -p $test_dir
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-        #python -m ipdb wenet/bin/recognize.py --gpu $gpu_id \
-		#--out_beam \
         python wenet/bin/recognize.py --gpu $gpu_id \
           --mode $mode \
           --config $dir/train.yaml \
           --data_type raw \
-          --test_data $wave_data/$test/data.list.10lines \
+          --test_data $wave_data/$test/data.list \
           --checkpoint $decode_checkpoint \
-          --beam_size 20 \
+          --beam_size 10 \
           --batch_size 1 \
           --penalty 0.0 \
           --dict $dict \
-          --result_file $test_dir/text_bpe_nbest \
+          --result_file $test_dir/text_bpe \
           --ctc_weight $ctc_weight \
           ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
-
-		grep -v "^beam:" $test_dir/text_bpe_nbest > $test_dir/text_bpe
 
         cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
         cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp
@@ -283,7 +270,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
 
         python tools/compute-wer.py --char=1 --v=1 \
           $wave_data/$test/text $test_dir/text > $test_dir/wer
-      } #&
+      } &
 
       ((idx+=1))
       if [ $idx -eq $num_gpus ]; then
@@ -292,6 +279,6 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
     }
     done
   done
-  #wait
+  wait
 fi
 

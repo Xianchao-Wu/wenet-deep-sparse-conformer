@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ $# -lt 2 ]
+then
+	echo "Usage: $0 <beg.stage> <end.stage>"
+	exit 1
+fi
+
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
 . ./path.sh || exit 1;
 
@@ -11,8 +17,8 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
 # export NCCL_SOCKET_IFNAME=ens4f1
 export NCCL_DEBUG=INFO
-stage=0 # start from 0 if you need to start from data preparation
-stop_stage=5
+stage=$1 #0 #0 # start from 0 if you need to start from data preparation
+stop_stage=$2 #0 #-1
 
 # The num of machines(nodes) for multi-machine training, 1 is for one machine.
 # NFS is required if num_nodes > 1.
@@ -23,7 +29,8 @@ num_nodes=1
 # on the second machine, and so on.
 node_rank=0
 # data
-data=/export/data/asr-data/OpenSLR/33/
+#data=data/33/
+data=/workspace/asr/wenet/examples/aishell/s0/data/33
 data_url=www.openslr.org/resources/33
 
 nj=16

@@ -8,6 +8,8 @@ import torch
 from typeguard import check_argument_types
 
 from wenet.transformer.attention import MultiHeadedAttention
+from wenet.transformer.attention import ProbMultiHeadedAttention
+
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
@@ -51,6 +53,10 @@ class TransformerDecoder(torch.nn.Module):
         normalize_before: bool = True,
         concat_after: bool = False,
         deepnorm_alpha: float = 1.0,
+        selfattention_layer_type: str = 'prob_attn',
+        factor: float = 5.0, 
+        keep_minlen: float = 15.0,
+        k_sample_pos: str = "middle",
     ):
         assert check_argument_types()
         super().__init__()
@@ -69,12 +75,23 @@ class TransformerDecoder(torch.nn.Module):
         self.use_output_layer = use_output_layer
         self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
         self.num_blocks = num_blocks
+        
+        decoder_selfattn_layer_args = (attention_heads, attention_dim,
+                                       self_attention_dropout_rate)
+
+        if selfattention_layer_type == 'attn':
+            decoder_selfattn_layer = MultiHeadedAttention
+        else:
+            # 'prob_attn'
+            decoder_selfattn_layer = ProbMultiHeadedAttention
+            decoder_selfattn_layer_args += (factor, keep_minlen, k_sample_pos)
 
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
-                MultiHeadedAttention(attention_heads, attention_dim,
-                                     self_attention_dropout_rate),
+                decoder_selfattn_layer(*decoder_selfattn_layer_args),
+                #MultiHeadedAttention(attention_heads, attention_dim,
+                #                     self_attention_dropout_rate),
                 MultiHeadedAttention(attention_heads, attention_dim,
                                      src_attention_dropout_rate),
                 PositionwiseFeedForward(attention_dim, linear_units,
@@ -217,6 +234,10 @@ class BiTransformerDecoder(torch.nn.Module):
         normalize_before: bool = True,
         concat_after: bool = False,
         deepnorm_alpha: float = 1.0,
+        selfattention_layer_type: str = 'prob_attn',
+        factor: float = 5.0, 
+        keep_minlen: float = 15.0,
+        k_sample_pos: str = 'middle',
     ):
 
         assert check_argument_types()
@@ -226,14 +247,16 @@ class BiTransformerDecoder(torch.nn.Module):
             num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before, concat_after,
-            deepnorm_alpha)
+            deepnorm_alpha, 
+            selfattention_layer_type, factor, keep_minlen, k_sample_pos)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
             r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before, concat_after,
-            deepnorm_alpha)
+            deepnorm_alpha,
+            selfattention_layer_type, factor, keep_minlen, k_sample_pos)
 
     def forward(
         self,

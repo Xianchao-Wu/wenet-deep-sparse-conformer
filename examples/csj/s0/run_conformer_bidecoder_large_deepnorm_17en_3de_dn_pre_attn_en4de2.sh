@@ -16,9 +16,9 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # 6. make "data.list" files
 # 7. train -> 50 epochs
 
-stage=8 #7 #7 # train -> 50 epochs -> 200 epochs
+stage=7 #8 #8 #8 #8 #8 #8 #8 #8 #7 # train -> 50 epochs -> 200 epochs
 #stop_stage=8 #
-stop_stage=8 #7 #7 #
+stop_stage=7 #8 # 7 # 8 #7 #
 
 # data
 #data_url=www.openslr.org/resources/12
@@ -28,25 +28,26 @@ datadir=/workspace/asr/csj
 # output wav data dir
 wave_data=data # wave file path
 # Optional train_config
-train_config=conf/train_conformer_bidecoder_large.yaml
+#train_config=conf/train_conformer_bidecoder_large_17en_3de_deepnorm_prenorm.yaml
+
+train_config=conf/train_conformer_bidecoder_large_17en_3de_deepnorm_prenorm_attn_en4de2.yaml
+
 #checkpoint=/workspace/asr/wenet/examples/csj/s0/exp/sp_spec_aug_conformer_bidecoder_large/119.pt
-checkpoint=
+#checkpoint=
+#exp/sp_spec_aug_conformer_bidecoder_large_deepnorm/31.pt
 cmvn=true # cmvn is for mean, variance, frame_number statistics
 do_delta=false # not used...
 
-dir=exp/sp_spec_aug_conformer_bidecoder_large # model's dir (output dir)
+dir=exp/sp_spec_aug_conformer_bidecoder_large_deepnorm_17en_3de_dn_pre_attn_en4de2 # model's dir (output dir)
+checkpoint=
+#$dir/2.pt
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
-average_num=10
+average_num=30
 decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
-#decode_modes="attention_rescoring" # ctc_greedy_search ctc_prefix_beam_search attention"
-#decode_modes="ctc_greedy_search" # ctc_prefix_beam_search attention"
-#decode_modes="ctc_prefix_beam_search" # attention"
-#decode_modes="attention_rescoring" # ok for n-best output
-#decode_modes="attention" # ok for n-best output
 
 . tools/parse_options.sh || exit 1;
 
@@ -60,8 +61,7 @@ set -o pipefail # return value of the whole bash = final line executed's result
 
 train_set=train
 dev_set=dev
-#recog_set="test1 test2 test3"
-recog_set="test1" # test2 test3"
+recog_set="test1 test2 test3"
 
 ### CSJ data is not free!
 # buying URL: https://ccd.ninjal.ac.jp/csj/en/
@@ -189,7 +189,8 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   rm -f $INIT_FILE # delete old one before starting
   init_method=file://$(readlink -f $INIT_FILE)
   echo "$0: init method is $init_method"
-  num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
+  #num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
+  num_gpus=1
   # Use "nccl" if it works, otherwise use "gloo"
   #dist_backend="gloo"
   dist_backend="nccl"
@@ -198,8 +199,9 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
-  num_gpus=1
   # debug wenet code only usage:
+  #--train_data $wave_data/$train_set/data.list \
+
   for ((i = 0; i < $num_gpus; ++i)); do
   {
     gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
@@ -215,12 +217,12 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
       --ddp.world_size $num_gpus \
       --ddp.rank $i \
       --ddp.dist_backend $dist_backend \
-      --num_workers 0 \
+      --num_workers 1 \
       $cmvn_opts \
       --pin_memory
-  } &
+  } #&
   done
-  wait
+  #wait
 fi
 
 ### test model ###
@@ -231,11 +233,10 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
   mkdir -p $dir/test
   decode_checkpoint=$dir/avg_${average_num}.pt
-  average_checkpoint=false
   if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
-    python -m ipdb wenet/bin/average_model.py \
+    python wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
       --num ${average_num} \
@@ -244,12 +245,12 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
   # -1 for full chunk
   decoding_chunk_size=-1
-  ctc_weight=0.5
+  #ctc_weight=0.5
+  ctc_weight=0.3
   # Polling GPU id begin with index 0
-  #num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-  num_gpus=1 #$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-  idx=2
-  decode_checkpoint=$dir/84.pt
+  num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
+  idx=0
+  #decode_checkpoint=$dir/84.pt
   for test in $recog_set; do
     for mode in ${decode_modes}; do
     {
@@ -257,23 +258,19 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
         test_dir=$dir/${test}_${mode}
         mkdir -p $test_dir
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-        #python -m ipdb wenet/bin/recognize.py --gpu $gpu_id \
-		#--out_beam \
         python wenet/bin/recognize.py --gpu $gpu_id \
           --mode $mode \
           --config $dir/train.yaml \
           --data_type raw \
-          --test_data $wave_data/$test/data.list.10lines \
+          --test_data $wave_data/$test/data.list \
           --checkpoint $decode_checkpoint \
           --beam_size 20 \
           --batch_size 1 \
           --penalty 0.0 \
           --dict $dict \
-          --result_file $test_dir/text_bpe_nbest \
+          --result_file $test_dir/text_bpe \
           --ctc_weight $ctc_weight \
           ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
-
-		grep -v "^beam:" $test_dir/text_bpe_nbest > $test_dir/text_bpe
 
         cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
         cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp
@@ -283,7 +280,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
 
         python tools/compute-wer.py --char=1 --v=1 \
           $wave_data/$test/text $test_dir/text > $test_dir/wer
-      } #&
+      } &
 
       ((idx+=1))
       if [ $idx -eq $num_gpus ]; then
@@ -292,6 +289,5 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
     }
     done
   done
-  #wait
+  wait
 fi
-

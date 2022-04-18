@@ -16,13 +16,14 @@ def wavfn(apath):
         wavdict[aid] = fullwavpath
     return wavdict
 
-def xmlfn(apath):
+def xmlfn(apath, is_comb):
     xmldict = dict()  # key=id, value=full.path of .xml.simp
+    aflag = '.xml.simp.comb' if is_comb else '.xml.simp'
     for axmlfn in os.listdir(apath):
-        if not axmlfn.endswith('.xml.simp'):
+        if not axmlfn.endswith(aflag):
             continue
         axmlfn2 = os.path.join(apath, axmlfn)
-        aid = axmlfn.replace('.xml.simp', '')
+        aid = axmlfn.replace(aflag, '')
         # print('obtain id: {}\t{}'.format(axmlfn, aid))
         xmldict[aid] = axmlfn2
     return xmldict
@@ -67,12 +68,12 @@ def proc1file(fullxmlfn, fullwavfn, outwavpath):
             # otherwise, soundfile.write will give us error report!
             ch2to1(partwavfn, partwavfn1ch)
 
-def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
+def procpath(atag, csjpath, xmlsimppath, outwavpath, is_comb, idset):
     # atag = 'core' and 'noncore'
     axmlpath = xmlsimppath
     awavpath = os.path.join(csjpath, atag)
 
-    xmldict = xmlfn(axmlpath)
+    xmldict = xmlfn(axmlpath, is_comb)
     wavdict = wavfn(awavpath)
 
     wavidlist = list(wavdict.keys())
@@ -101,16 +102,17 @@ def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
         len(wavidlist)))
 
 if __name__ == '__main__':
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 5:
         print(
             "Usage: {}".format(sys.argv[0]) +
-            "<in.csj.path> <in.xml.simp.path> <out.wav.path> [id.list.fn]")
+            "<in.csj.path> <in.xml.simp.path> <out.wav.path> <is.comb=True/False> [id.list.fn]")
         exit(1)
 
     csjpath = sys.argv[1]
     xmlsimppath = sys.argv[2]
     outwavpath = sys.argv[3]
-    idlistfn = sys.argv[4] if len(sys.argv) == 5 else ""
+    is_comb = bool(sys.argv[4])
+    idlistfn = sys.argv[5] if len(sys.argv) == 6 else ""
     idset = set()
     if len(idlistfn) > 0:
         with open(idlistfn) as br:
@@ -120,4 +122,4 @@ if __name__ == '__main__':
     print(idset)
 
     for atag in ['core', 'noncore']:
-        procpath(atag, csjpath, xmlsimppath, outwavpath, idset)
+        procpath(atag, csjpath, xmlsimppath, outwavpath, is_comb, idset)
