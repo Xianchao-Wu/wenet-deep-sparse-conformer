@@ -1,8 +1,14 @@
 #!/bin/bash
 
+if [ $# -lt 2 ]
+then
+	echo "Usage: $0 <start.stage> <end.stage>"
+	exit 1
+fi
+
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
-echo $stage
-echo $stop_stage
+#echo $stage
+#echo $stop_stage
 
 . ./path.sh || exit 1;
 
@@ -20,13 +26,13 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 #echo $stage
 #echo $stop_stage
 
-stage=7 # train -> 50 epochs
-stop_stage=7 #8 #
+stage=$1 #7 # train -> 50 epochs
+stop_stage=$2 #7 #8 #
 
 echo $stage
 echo $stop_stage
 
-exit 0
+#exit 0
 
 # data
 #data_url=www.openslr.org/resources/12
