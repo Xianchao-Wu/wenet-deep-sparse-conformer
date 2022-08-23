@@ -120,6 +120,7 @@ def parse_raw(data):
     """
     #import ipdb; ipdb.set_trace()
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         assert 'src' in sample
         json_line = sample['src']
         obj = json.loads(json_line)
@@ -180,6 +181,7 @@ def filter(data,
     """
     #import ipdb; ipdb.set_trace()
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         assert 'sample_rate' in sample
         assert 'wav' in sample
         assert 'label' in sample
@@ -214,6 +216,7 @@ def resample(data, resample_rate=16000):
     """
     #import ipdb; ipdb.set_trace()
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         assert 'sample_rate' in sample
         assert 'wav' in sample
         sample_rate = sample['sample_rate']
@@ -240,6 +243,7 @@ def speed_perturb(data, speeds=None):
     if speeds is None:
         speeds = [0.9, 1.0, 1.1]
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         assert 'sample_rate' in sample
         assert 'wav' in sample
         sample_rate = sample['sample_rate']
@@ -269,6 +273,7 @@ def compute_fbank(data,
     """
     #import ipdb; ipdb.set_trace()
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         assert 'sample_rate' in sample
         assert 'wav' in sample
         assert 'key' in sample
@@ -337,6 +342,7 @@ def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
         sp = None
 
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         assert 'txt' in sample
         txt = sample['txt'].strip()
         if non_lang_syms_pattern is not None:
@@ -389,6 +395,7 @@ def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
     """
     #import ipdb; ipdb.set_trace()
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         assert 'feat' in sample
         x = sample['feat']
         assert isinstance(x, torch.Tensor)
@@ -424,6 +431,7 @@ def shuffle(data, shuffle_size=10000):
     #import ipdb; ipdb.set_trace()
     buf = []
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         buf.append(sample)
         if len(buf) >= shuffle_size:
             random.shuffle(buf)
@@ -453,6 +461,7 @@ def sort(data, sort_size=500):
 
     buf = []
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         buf.append(sample)
         if len(buf) >= sort_size:
             buf.sort(key=lambda x: x['feat'].size(0))
@@ -478,6 +487,7 @@ def static_batch(data, batch_size=16):
     #import ipdb; ipdb.set_trace()
     buf = []
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         buf.append(sample)
         if len(buf) >= batch_size:
             yield buf
@@ -538,6 +548,7 @@ def padding(data):
     """
     #import ipdb; ipdb.set_trace()
     for sample in data:
+        #import ipdb; ipdb.set_trace()
         assert isinstance(sample, list)
         feats_length = torch.tensor([x['feat'].size(0) for x in sample],
                                     dtype=torch.int32)

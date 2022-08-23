@@ -5,7 +5,7 @@ encoder_conf:
     output_size: 512    # dimension of attention
     attention_heads: 8
     linear_units: 2048  # the number of units of position-wise feed forward
-    num_blocks: 12      # NOTE 12 the number of encoder blocks
+    num_blocks: 1 #12      # NOTE 12 the number of encoder blocks
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
     attention_dropout_rate: 0.1
@@ -24,8 +24,8 @@ decoder: bitransformer
 decoder_conf:
     attention_heads: 8
     linear_units: 2048
-    num_blocks: 3 # 3 NOTE
-    r_num_blocks: 3 # 3 NOTE
+    num_blocks: 1 #3 # 3 NOTE
+    r_num_blocks: 1 #3 # 3 NOTE
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
     self_attention_dropout_rate: 0.1
@@ -70,7 +70,7 @@ dataset_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 48
+        batch_size: 8 #4 #48
 
 grad_clip: 5
 accum_grad: 1

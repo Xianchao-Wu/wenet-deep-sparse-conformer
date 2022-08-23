@@ -34,6 +34,8 @@ from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.scheduler import WarmupLR
 from wenet.utils.config import override_config
 from wenet.utils.common import deepnorm_init_
+import numpy as np
+import random
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
@@ -96,7 +98,7 @@ def get_args():
     parser.add_argument("--non_lang_syms",
                         help="non-linguistic symbol file. One symbol per line.")
     parser.add_argument('--prefetch',
-                        default=100,
+                        default=0, #100,
                         type=int,
                         help='prefetch number')
     parser.add_argument('--bpe_model',
@@ -125,7 +127,18 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
     # Set random seed
-    torch.manual_seed(777)
+    #torch.manual_seed(777)
+    seed=777 #666
+
+    np.random.seed(seed)
+    random.seed(seed)
+
+    torch.manual_seed(seed)
+
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic=True
+
+
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
     if len(args.override_config) > 0:
@@ -147,11 +160,11 @@ def main():
     cv_conf['spec_aug'] = False
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
-    #import ipdb; ipdb.set_trace()
+    import ipdb; ipdb.set_trace()
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
                             train_conf, args.bpe_model, non_lang_syms, True)
-    #import ipdb; ipdb.set_trace()
-    #train_dataset[0]
+    import ipdb; ipdb.set_trace()
+    #train_dataset[0] # error, not work here
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          symbol_table,
@@ -159,19 +172,19 @@ def main():
                          args.bpe_model,
                          non_lang_syms,
                          partition=False)
-    #import ipdb; ipdb.set_trace()
-    #cv_dataset[0]
+    import ipdb; ipdb.set_trace()
+    #cv_dataset[0] # error, not work here
 
     train_data_loader = DataLoader(train_dataset,
                                    batch_size=None,
                                    pin_memory=args.pin_memory,
-                                   num_workers=args.num_workers,
-                                   prefetch_factor=args.prefetch)
+                                   num_workers=args.num_workers)#,
+                                   #prefetch_factor=args.prefetch) # TODO
     cv_data_loader = DataLoader(cv_dataset,
                                 batch_size=None,
                                 pin_memory=args.pin_memory,
-                                num_workers=args.num_workers,
-                                prefetch_factor=args.prefetch)
+                                num_workers=args.num_workers)#,
+                                #prefetch_factor=args.prefetch)
 
     input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
     vocab_size = len(symbol_table)
@@ -202,6 +215,7 @@ def main():
             fout.write(data)
 
     # Init asr model from configs
+    import ipdb; ipdb.set_trace()
     model = init_asr_model(configs)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
@@ -290,9 +304,10 @@ def main():
         configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
+        import ipdb; ipdb.set_trace()
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler)
-        #import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
                                                 configs)
         cv_loss = total_loss / num_seen_utts
