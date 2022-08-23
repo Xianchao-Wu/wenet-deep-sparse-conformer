@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     collate_func = CollateFunc(feat_dim, resample_rate)
     dataset = AudioDataset(args.in_scp)
-    batch_size = 20
+    batch_size = 2 #0
     data_loader = DataLoader(dataset,
                              batch_size=batch_size,
                              shuffle=True,
@@ -137,6 +137,6 @@ if __name__ == '__main__':
         'var_stat': list(all_var_stat.tolist()),
         'frame_num': all_number
     }
-
+    import ipdb; ipdb.set_trace()
     with open(args.out_cmvn, 'w') as fout:
         fout.write(json.dumps(cmvn_info))

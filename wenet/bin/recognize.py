@@ -174,6 +174,7 @@ def main():
     model.eval()
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for batch_idx, batch in enumerate(test_data_loader):
+            import ipdb; ipdb.set_trace()
             keys, feats, target, feats_lengths, target_lengths = batch
             feats = feats.to(device)
             target = target.to(device)

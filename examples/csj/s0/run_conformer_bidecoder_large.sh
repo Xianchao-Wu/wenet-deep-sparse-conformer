@@ -6,7 +6,8 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+#export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+export CUDA_VISIBLE_DEVICES="2" #,3,4,5,6,7"
 
 # 1. xml split by sentences
 # 2. wav split by xml.simp's guidance
@@ -16,9 +17,9 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # 6. make "data.list" files
 # 7. train -> 50 epochs
 
-stage=8 #7 #7 # train -> 50 epochs -> 200 epochs
+stage=7 #7 # train -> 50 epochs -> 200 epochs
 #stop_stage=8 #
-stop_stage=8 #7 #7 #
+stop_stage=7 #7 #
 
 # data
 #data_url=www.openslr.org/resources/12
@@ -34,15 +35,15 @@ checkpoint=
 cmvn=true # cmvn is for mean, variance, frame_number statistics
 do_delta=false # not used...
 
-dir=exp/sp_spec_aug_conformer_bidecoder_large # model's dir (output dir)
+dir=exp/sp_spec_aug_conformer_bidecoder_large_debug # model's dir (output dir)
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 average_num=10
-decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
-#decode_modes="attention_rescoring" # ctc_greedy_search ctc_prefix_beam_search attention"
+#decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
+decode_modes="attention_rescoring" # ctc_greedy_search ctc_prefix_beam_search attention"
 #decode_modes="ctc_greedy_search" # ctc_prefix_beam_search attention"
 #decode_modes="ctc_prefix_beam_search" # attention"
 #decode_modes="attention_rescoring" # ok for n-best output
@@ -200,9 +201,13 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   # export later
   num_gpus=1
   # debug wenet code only usage:
+  #for ((i = 0; i < $num_gpus; ++i)); do
+  echo 'start training...'
+
   for ((i = 0; i < $num_gpus; ++i)); do
   {
     gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
+	echo "gpu_id=$gpu_id"
     python -m ipdb wenet/bin/train.py --gpu $gpu_id \
       --config $train_config \
       --data_type raw \
@@ -218,9 +223,9 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
       --num_workers 0 \
       $cmvn_opts \
       --pin_memory
-  } &
+  } #&
   done
-  wait
+  #wait
 fi
 
 ### test model ###
@@ -249,7 +254,8 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   #num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   num_gpus=1 #$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   idx=2
-  decode_checkpoint=$dir/84.pt
+  #decode_checkpoint=$dir/84.pt
+  decode_checkpoint=$dir/avg_${average_num}.pt
   for test in $recog_set; do
     for mode in ${decode_modes}; do
     {
@@ -259,7 +265,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
         #python -m ipdb wenet/bin/recognize.py --gpu $gpu_id \
 		#--out_beam \
-        python wenet/bin/recognize.py --gpu $gpu_id \
+        python -m ipdb wenet/bin/recognize.py --gpu $gpu_id \
           --mode $mode \
           --config $dir/train.yaml \
           --data_type raw \
