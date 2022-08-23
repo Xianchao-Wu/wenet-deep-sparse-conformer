@@ -28,7 +28,10 @@ class CTC(torch.nn.Module):
         self.ctc_lo = torch.nn.Linear(eprojs, odim)
 
         reduction_type = "sum" if reduce else "none"
-        self.ctc_loss = torch.nn.CTCLoss(reduction=reduction_type)
+        self.ctc_loss = torch.nn.CTCLoss(reduction=reduction_type) 
+        # TODO default blank=0 
+        # zero_infinity=True
+
         self.normalize_length = normalize_length
 
     def forward(self, hs_pad: torch.Tensor, hlens: torch.Tensor,
