@@ -327,7 +327,7 @@ def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
         Returns:
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
-    #import ipdb; ipdb.set_trace()
+    import ipdb; ipdb.set_trace()
     if non_lang_syms is not None:
         non_lang_syms_pattern = re.compile(r"(\[[^\[]]+]|<[^<>]+>|{[^{}]+})")
     else:
@@ -342,7 +342,7 @@ def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
         sp = None
 
     for sample in data:
-        #import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
         assert 'txt' in sample
         txt = sample['txt'].strip()
         if non_lang_syms_pattern is not None:
@@ -371,7 +371,8 @@ def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
             if ch in symbol_table:
                 label.append(symbol_table[ch])
             elif '<unk>' in symbol_table:
-                label.append(symbol_table['<unk>'])
+                label.append(symbol_table['<unk>']) # TODO <unk> 最好定义一下！
+                # 如果train set里面没有<unk>，那么其实validation, test集合里面，有<unk>，也没啥用。。。？
 
         sample['tokens'] = tokens
         sample['label'] = label

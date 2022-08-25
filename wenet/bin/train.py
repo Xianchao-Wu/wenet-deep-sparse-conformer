@@ -98,7 +98,7 @@ def get_args():
     parser.add_argument("--non_lang_syms",
                         help="non-linguistic symbol file. One symbol per line.")
     parser.add_argument('--prefetch',
-                        default=0, #100,
+                        default=0, #100, # TODO need to change from 100 back to 0 when not in "debug" mode
                         type=int,
                         help='prefetch number')
     parser.add_argument('--bpe_model',
@@ -128,7 +128,7 @@ def main():
 
     # Set random seed
     #torch.manual_seed(777)
-    seed=777 #666
+    seed=777 #666 TODO set seed only in debug mode!
 
     np.random.seed(seed)
     random.seed(seed)
@@ -161,6 +161,7 @@ def main():
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
     import ipdb; ipdb.set_trace()
+    # len(symbol_table) = 5502, args.bpe_model=None
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
                             train_conf, args.bpe_model, non_lang_syms, True)
     import ipdb; ipdb.set_trace()
@@ -184,8 +185,8 @@ def main():
                                 batch_size=None,
                                 pin_memory=args.pin_memory,
                                 num_workers=args.num_workers)#,
-                                #prefetch_factor=args.prefetch)
-
+                                #prefetch_factor=args.prefetch) # TODO
+    # 这个就是提前加载多少个batch的数据 NOTE prefetch_factor=100
     input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
     vocab_size = len(symbol_table)
 

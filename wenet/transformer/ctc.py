@@ -20,6 +20,7 @@ class CTC(torch.nn.Module):
             encoder_output_size: number of encoder projection units
             dropout_rate: dropout rate (0.0 ~ 1.0)
             reduce: reduce the CTC loss into a scalar
+            normalize_length: use token number to normalize if True, use batch size otherwise
         """
         assert check_argument_types()
         super().__init__()
@@ -28,7 +29,13 @@ class CTC(torch.nn.Module):
         self.ctc_lo = torch.nn.Linear(eprojs, odim)
 
         reduction_type = "sum" if reduce else "none"
-        self.ctc_loss = torch.nn.CTCLoss(reduction=reduction_type)
+        #self.ctc_loss = torch.nn.CTCLoss(reduction=reduction_type) # TODO
+        self.ctc_loss = torch.nn.CTCLoss(blank=0, reduction=reduction_type, zero_infinity=True) # TODO
+        # blank=0=default.value!!! zero_infinity=False=default.value
+        # TODO about reduction_type: 'none', 'mean', and 'sum'
+        # 1. 'mean', the output losses will be divided by the target lengths,
+        #    and then the mean over the batch is taken. Default: 'mean'
+
         self.normalize_length = normalize_length
 
     def forward(self, hs_pad: torch.Tensor, hlens: torch.Tensor,

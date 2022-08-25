@@ -143,22 +143,68 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   echo "<unk> 1" >> ${dict} # <unk> must be 1
 
   # we borrowed these code and scripts which are related bpe from ESPnet.
-  cut -f 2- -d" " $wave_data/${train_set}/text > $wave_data/lang_char/input.txt
+  # TODO 2022 08 24 这里有个bug，因为text文件里面，是使用'\t'来做分隔符的，所以不能指定-d" "...
+  #cut -f 2- -d" " $wave_data/${train_set}/text > $wave_data/lang_char/input.txt
+  # 解决方案：用这个默认的分隔符就好了，默认的就是'\t' (tab)
+  cut -f 2- $wave_data/${train_set}/text > $wave_data/lang_char/input.txt
   tools/spm_train \
     --input=$wave_data/lang_char/input.txt \
     --vocab_size=${nbpe} \
     --model_type=${bpemode} \
     --model_prefix=${bpemodel} \
     --input_sentence_size=100000000
+  # 100 million
+  # 上面这一步，得到的train_bpe4096.vocab是包括了4096个词条的！！！
+  # root@b762330f33fe:/workspace/asr/wenet/examples/csj/s0/data/lang_char# wc -l train_bpe4096.vocab
+  # 4096 train_bpe4096.vocab
+  #root@b762330f33fe:/workspace/asr/wenet/examples/csj/s0/data/lang_char# more train_bpe4096.vocab
+  #<unk>   0
+  #<s>     0
+  #</s>    0
+  #00      -0
+  #_00     -1
+  #...
+  #弦      -4091
+  #旗      -4092
 
   tools/spm_encode \
     --model=${bpemodel}.model \
     --output_format=piece < $wave_data/lang_char/input.txt | \
-    tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+1}' >> ${dict}
+    tr ' ' '\n' | LC_ALL=C sort | uniq | awk '{print $0 " " NR+1}' >> ${dict}
+  # tr : changes ' ' to '\n'
+  # NR+1 : 从2开始计数，因为前面有了<blank>=0, <unk>=1
   num_token=$(cat $dict | wc -l)
   echo "<sos/eos> $num_token" >> $dict # <eos>
   wc -l ${dict}
 fi
+# TODO NOTE
+# e.g., root@b762330f33fe:/workspace/asr/wenet/examples/csj/s0/data/lang_char# head -n 10 train_bpe4096_units.txt
+#<blank> 0 # --> 这个太重要了！！！ 代码中也要求有 blank=0，不能是其他的token.id的取值...
+#<unk> 1
+#. 2
+#.000 3
+
+# ...
+# <sos/eos> 5501 # 这个也是相当重要的！必须有eos/sos这个东西！
+
+#root@b762330f33fe:/workspace/asr/wenet/examples/csj/s0/data/lang_char# grep "<" train_bpe4096_units.txt
+#<blank> 0
+#<unk> 1
+#<sos/eos> 5501
+
+# why from 4096 to 5502??? 本来是指定了4096个词条，为什么后来出现了5502个呢？？？ TODO
+# 回答：增加了很多汉字，例如：
+# root@b762330f33fe:/workspace/asr/wenet/examples/csj/s0/data/lang_char/cut.bug.fixed.20220824# tail comp.py.log
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 椒, 952
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 蝮, 953
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 剃, 954
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 詔勅, 955
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 遁, 956
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 邇, 957
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 噺, 958
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 僥倖, 959
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 遜, 960
+#in dict.no.special.symbols, not in train_bpe4096.vocab: 聘, 961
 
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then

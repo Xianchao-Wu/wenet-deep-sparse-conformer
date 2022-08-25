@@ -719,7 +719,8 @@ def init_asr_model(configs):
         assert configs['decoder_conf']['r_num_blocks'] > 0
         decoder = BiTransformerDecoder(vocab_size, encoder.output_size(),
                                        **configs['decoder_conf'])
-    ctc = CTC(vocab_size, encoder.output_size(), normalize_length=configs['model_conf']['length_normalized_loss'])
+    ctc = CTC(vocab_size, encoder.output_size(), 
+              normalize_length=configs['model_conf']['length_normalized_loss'])
     model = ASRModel(
         vocab_size=vocab_size,
         encoder=encoder,
