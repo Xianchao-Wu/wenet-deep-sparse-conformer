@@ -140,7 +140,7 @@ echo "dictionary: ${dict}"
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   ### Task dependent. You have to check non-linguistic symbols used in the corpus.
   echo "stage 5: Dictionary and Json Data Preparation"
-  mkdir -p data/lang_char/
+  mkdir -p ${wave_data}/lang_char/
 
   echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
   echo "<unk> 1" >> ${dict} # <unk> must be 1
@@ -229,6 +229,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
   mkdir -p $dir/test
   decode_checkpoint=$dir/avg_${average_num}.pt
+  average_checkpoint=false
   if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
@@ -260,13 +261,16 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
           --data_type raw \
           --test_data $wave_data/$test/data.list \
           --checkpoint $decode_checkpoint \
-          --beam_size 20 \
+          --beam_size 30 \
+          --out_beam \
           --batch_size 1 \
           --penalty 0.0 \
           --dict $dict \
-          --result_file $test_dir/text_bpe \
+          --result_file $test_dir/text_bpe_nbest \
           --ctc_weight $ctc_weight \
           ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+
+        grep -v "^beam:" $test_dir/text_bpe_nbest > $test_dir/text_bpe
 
         cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
         cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp

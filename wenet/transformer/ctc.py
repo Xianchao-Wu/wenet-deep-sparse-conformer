@@ -35,6 +35,8 @@ class CTC(torch.nn.Module):
         # TODO about reduction_type: 'none', 'mean', and 'sum'
         # 1. 'mean', the output losses will be divided by the target lengths,
         #    and then the mean over the batch is taken. Default: 'mean'
+        # TODO default blank=0 
+        # zero_infinity=True
 
         self.normalize_length = normalize_length
 
